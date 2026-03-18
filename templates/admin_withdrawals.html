@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Admin — Penarikan — Socrow{% endblock %}
+{% block content %}
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+  <div>
+    <h1 style="font-family:var(--font-display);font-size:26px;font-weight:800;">💸 Manajemen Penarikan</h1>
+    <p style="color:var(--text-muted);">Proses permintaan penarikan dari pengguna.</p>
+  </div>
+  <a href="/admin/kyc" class="btn btn-ghost btn-sm"><i class="fa fa-arrow-left"></i> Panel Admin</a>
+</div>
+
+{% if wds %}
+<div style="display:flex;flex-direction:column;gap:12px;">
+  {% for w in wds %}
+  <div style="background:var(--bg-card);border:1px solid {% if w.status=='pending' %}rgba(245,200,66,.25){% elif w.status=='approved' %}rgba(34,211,160,.2){% else %}var(--border){% endif %};border-radius:var(--radius-lg);padding:20px 24px;">
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <div style="width:44px;height:44px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;background:{% if w.status=='pending' %}rgba(245,200,66,.1){% elif w.status=='approved' %}rgba(34,211,160,.1){% else %}rgba(255,85,114,.1){% endif %};">
+        {% if w.status=='pending' %}⏳{% elif w.status=='approved' %}✅{% else %}❌{% endif %}
+      </div>
+      <div style="flex:1;min-width:180px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;flex-wrap:wrap;">
+          <span style="font-weight:700;font-size:15px;">{{ w.username }}</span>
+          <span class="badge {% if w.status=='pending' %}badge-pending{% elif w.status=='approved' %}badge-verified{% else %}badge-danger{% endif %}">
+            {{ w.status|title }}
+          </span>
+          <span class="badge badge-accent" style="font-size:11px;">{{ w.source|title }}</span>
+        </div>
+        <div style="font-size:13px;color:var(--text-muted);display:flex;gap:14px;flex-wrap:wrap;">
+          <span style="font-weight:700;font-size:15px;color:var(--green);">{{ w.net_amount|rupiah }}</span>
+          <span>{{ w.bank_name }} — {{ w.bank_account }}</span>
+          <span>a/n {{ w.account_name }}</span>
+          <span>{{ w.created_at[:10] }}</span>
+        </div>
+        {% if w.admin_note %}
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Catatan: {{ w.admin_note }}</div>
+        {% endif %}
+      </div>
+
+      {% if w.status == 'pending' %}
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <form method="POST" action="/admin/withdrawal/{{ w.id }}/approve" style="display:flex;gap:6px;align-items:center;">
+          <input type="text" name="admin_note" class="form-input" style="width:140px;padding:7px 10px;font-size:13px;" placeholder="Catatan...">
+          <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Setujui penarikan ini?')">
+            <i class="fa fa-check"></i> Approve
+          </button>
+        </form>
+        <form method="POST" action="/admin/withdrawal/{{ w.id }}/reject" style="display:flex;gap:6px;align-items:center;">
+          <input type="text" name="admin_note" class="form-input" style="width:140px;padding:7px 10px;font-size:13px;" placeholder="Alasan tolak..." required>
+          <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Tolak penarikan ini?')">
+            <i class="fa fa-xmark"></i> Tolak
+          </button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card empty-state">
+  <i class="fa fa-inbox"></i>
+  <h3>Tidak ada permintaan penarikan</h3>
+  <p>Semua penarikan sudah diproses.</p>
+</div>
+{% endif %}
+{% endblock %}

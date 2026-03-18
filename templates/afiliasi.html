@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block title %}Program Afiliasi — Socrow{% endblock %}
+{% block head %}
+<style>
+.aff-hero { background:linear-gradient(135deg,rgba(108,99,255,.12),rgba(34,211,160,.06)); border:1px solid rgba(108,99,255,.2); border-radius:var(--radius-xl); padding:40px; margin-bottom:28px; text-align:center; position:relative; overflow:hidden; }
+.aff-hero::before { content:'🤝'; position:absolute; right:20px; top:50%; transform:translateY(-50%); font-size:80px; opacity:.1; }
+.aff-hero h1 { font-family:var(--font-display); font-size:28px; font-weight:800; margin-bottom:8px; }
+.aff-hero h1 span { color:var(--accent-light); }
+.aff-hero p { color:var(--text-secondary); max-width:500px; margin:0 auto 24px; }
+.code-box { display:inline-flex; align-items:center; gap:0; background:var(--bg-elevated); border:1px solid var(--border); border-radius:var(--radius-sm); overflow:hidden; max-width:400px; width:100%; }
+.code-val { flex:1; padding:12px 18px; font-family:var(--font-display); font-size:20px; font-weight:700; letter-spacing:2px; color:var(--accent-light); text-align:center; }
+.copy-btn { padding:12px 16px; background:var(--accent); color:white; border:none; cursor:pointer; font-size:14px; font-weight:600; font-family:var(--font-body); transition:all .2s; white-space:nowrap; }
+.copy-btn:hover { background:var(--accent-light); }
+.stats-band { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:28px; }
+@media(max-width:700px){ .stats-band{grid-template-columns:repeat(2,1fr);} }
+.stat-box { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px; text-align:center; }
+.stat-box .v { font-family:var(--font-display); font-size:26px; font-weight:800; margin-bottom:4px; }
+.stat-box .l { font-size:12px; color:var(--text-muted); }
+.aff-grid { display:grid; grid-template-columns:1fr 320px; gap:24px; align-items:start; }
+@media(max-width:860px){ .aff-grid{grid-template-columns:1fr;} }
+.log-row { display:flex; align-items:center; gap:12px; padding:12px 20px; border-bottom:1px solid var(--border); font-size:14px; }
+.log-row:last-child { border-bottom:none; }
+.how-step { display:flex; gap:14px; align-items:flex-start; margin-bottom:16px; }
+.step-num { width:32px; height:32px; background:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-weight:800; font-size:14px; flex-shrink:0; }
+.ref-row { display:flex; justify-content:space-between; padding:10px 20px; border-bottom:1px solid var(--border); font-size:14px; color:var(--text-secondary); }
+.ref-row:last-child { border-bottom:none; }
+</style>
+{% endblock %}
+{% block content %}
+<!-- HERO -->
+<div class="aff-hero">
+  <div style="font-size:44px;margin-bottom:16px;">🤝</div>
+  <h1>Program <span>Afiliasi</span> Socrow</h1>
+  <p>Bagikan kode referralmu. Setiap transaksi dari orang yang kamu ajak, kamu dapat komisi {{ fee_afiliasi }}% otomatis masuk ke saldo.</p>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:10px;">
+    <div class="code-box">
+      <div class="code-val" id="codeDisplay">{{ aff.code if aff else '–' }}</div>
+      <button class="copy-btn" onclick="copyCode()">
+        <i class="fa fa-copy" id="copyIcon"></i> Salin
+      </button>
+    </div>
+    <div style="font-size:13px;color:var(--text-muted);">
+      Link undangan:
+      <a href="{{ base_url }}/daftar?ref={{ aff.code if aff else '' }}" target="_blank"
+         style="color:var(--accent-light);word-break:break-all;">
+        {{ base_url }}/daftar?ref={{ aff.code if aff else '' }}
+      </a>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px;">
+      <button onclick="shareWhatsApp()" class="btn btn-ghost btn-sm">
+        <i class="fa fa-share-nodes"></i> Share WA
+      </button>
+      <button onclick="copyLink()" class="btn btn-ghost btn-sm">
+        <i class="fa fa-link"></i> Salin Link
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-band">
+  <div class="stat-box">
+    <div class="v" style="color:var(--accent-light);">{{ aff.total_referred if aff else 0 }}</div>
+    <div class="l">Orang Diundang</div>
+  </div>
+  <div class="stat-box">
+    <div class="v" style="color:var(--green);">{{ aff.total_earned|rupiah if aff else 'Rp 0' }}</div>
+    <div class="l">Total Komisi</div>
+  </div>
+  <div class="stat-box">
+    <div class="v" style="color:var(--yellow);">{{ user.saldo_afiliasi|rupiah }}</div>
+    <div class="l">Saldo Tersedia</div>
+  </div>
+  <div class="stat-box">
+    <div class="v" style="color:var(--text-primary);">{{ fee_afiliasi }}%</div>
+    <div class="l">Komisi per Transaksi</div>
+  </div>
+</div>
+
+<div class="aff-grid">
+  <!-- LOG KOMISI -->
+  <div>
+    <div class="card" style="overflow:hidden;">
+      <div style="padding:18px 20px;border-bottom:1px solid var(--border);font-family:var(--font-display);font-size:15px;font-weight:700;">
+        💸 Riwayat Komisi
+      </div>
+      {% if logs %}
+        {% for l in logs %}
+        <div class="log-row">
+          <div style="width:36px;height:36px;background:rgba(34,211,160,.1);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;flex-shrink:0;">💰</div>
+          <div style="flex:1;">
+            <div style="font-weight:600;">{{ l.barang[:35] }}{% if l.barang|length > 35 %}...{% endif %}</div>
+            <div style="font-size:12px;color:var(--text-muted);">Nilai transaksi: {{ l.transaction_amount|rupiah }}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-weight:700;color:var(--green);">+{{ l.commission|rupiah }}</div>
+            <div style="font-size:11px;color:var(--text-muted);">{{ l.created_at[:10] }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+      <div class="empty-state" style="padding:40px;">
+        <i class="fa fa-coins"></i>
+        <h3>Belum ada komisi</h3>
+        <p>Mulai bagikan kode referralmu!</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- YANG SUDAH DIUNDANG -->
+    {% if referred %}
+    <div class="card" style="overflow:hidden;margin-top:18px;">
+      <div style="padding:18px 20px;border-bottom:1px solid var(--border);font-family:var(--font-display);font-size:15px;font-weight:700;">
+        👥 Anggota yang Diundang ({{ referred|length }})
+      </div>
+      {% for r in referred %}
+      <div class="ref-row">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="avatar" style="width:32px;height:32px;font-size:12px;">{{ r.username[0].upper() }}</div>
+          <span style="font-weight:600;color:var(--text-primary);">{{ r.username }}</span>
+        </div>
+        <span style="font-size:12px;">Bergabung {{ r.created_at[:10] }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- SIDEBAR CARA KERJA -->
+  <div>
+    <div class="card" style="padding:24px;margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:18px;">💡 Cara Kerja</div>
+      {% for s in [
+        ('Bagikan kode atau link afiliasimu ke teman/follower','fa-share-nodes'),
+        ('Mereka daftar Socrow menggunakan kodemu','fa-user-plus'),
+        ('Mereka bertransaksi — kamu otomatis dapat ' ~ fee_afiliasi ~ '% komisi','fa-coins'),
+        ('Saldo terkumpul bisa ditarik kapan saja','fa-wallet'),
+      ] %}
+      <div class="how-step">
+        <div class="step-num">{{ loop.index }}</div>
+        <div style="padding-top:4px;">
+          <p style="font-size:14px;color:var(--text-secondary);">
+            <i class="fa {{ s[1] }}" style="color:var(--accent-light);margin-right:6px;"></i>{{ s[0] }}
+          </p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="card" style="padding:24px;background:rgba(34,211,160,.04);border-color:rgba(34,211,160,.15);">
+      <div style="font-size:13px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">📊 Contoh Perhitungan</div>
+      <div style="font-size:14px;color:var(--text-secondary);line-height:1.8;">
+        Temanmu jual produk Rp 500.000<br>
+        Komisimu: <strong style="color:var(--green);">{{ fee_afiliasi }}% × Rp 500.000 = Rp {{ (500000 * fee_afiliasi / 100)|int|rupiah }}</strong><br><br>
+        Jika 10 temanmu masing-masing punya 5 transaksi/bulan:<br>
+        <strong style="color:var(--accent-light);">{{ (10 * 5 * 500000 * fee_afiliasi / 100)|int|rupiah }}/bulan</strong> pasif! 🚀
+      </div>
+    </div>
+
+    {% if user.saldo_afiliasi >= 10000 %}
+    <a href="/withdraw" class="btn btn-primary btn-full" style="margin-top:14px;">
+      <i class="fa fa-paper-plane"></i> Tarik Saldo Afiliasi
+    </a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function copyCode() {
+  const code = document.getElementById('codeDisplay').textContent.trim();
+  navigator.clipboard.writeText(code).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.innerHTML = '<i class="fa fa-check"></i> Tersalin!';
+    setTimeout(() => btn.innerHTML = '<i class="fa fa-copy"></i> Salin', 2000);
+  });
+}
+
+function copyLink() {
+  const link = '{{ base_url }}/daftar?ref={{ aff.code if aff else "" }}';
+  navigator.clipboard.writeText(link).then(() => {
+    const btn = event.target.closest('button');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<i class="fa fa-check"></i> Tersalin!';
+    setTimeout(() => btn.innerHTML = orig, 2000);
+  });
+}
+
+function shareWhatsApp() {
+  const code = '{{ aff.code if aff else "" }}';
+  const link = '{{ base_url }}/daftar?ref=' + code;
+  const text = encodeURIComponent(`🛡️ Jual beli aman tanpa risiko di *Socrow*!\n\nDana dijamin aman sampai barang kamu terima. Daftar gratis:\n${link}\n\nGunakan kode referralku: *${code}*`);
+  window.open('https://wa.me/?text=' + text, '_blank');
+}
+</script>
+{% endblock %}

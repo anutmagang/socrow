@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block title %}Penarikan Saldo — Socrow{% endblock %}
+{% block head %}
+<style>
+.wd-grid { display:grid; grid-template-columns:1fr 360px; gap:24px; align-items:start; }
+@media(max-width:860px){ .wd-grid{grid-template-columns:1fr;} }
+.saldo-card { background:linear-gradient(135deg,rgba(34,211,160,.1),rgba(108,99,255,.06)); border:1px solid rgba(34,211,160,.2); border-radius:var(--radius-xl); padding:32px; margin-bottom:20px; }
+.saldo-card .lbl { font-size:13px; color:var(--text-muted); margin-bottom:4px; }
+.saldo-card .val { font-family:var(--font-display); font-size:36px; font-weight:800; letter-spacing:-1px; }
+.source-toggle { display:flex; gap:8px; padding:4px; background:var(--bg-elevated); border-radius:var(--radius-sm); margin-bottom:18px; }
+.source-btn { flex:1; padding:9px; text-align:center; border-radius:6px; font-size:14px; font-weight:600; cursor:pointer; border:none; background:none; color:var(--text-muted); font-family:var(--font-body); transition:all .2s; }
+.source-btn.active { background:var(--bg-card); color:var(--text-primary); box-shadow:0 2px 8px rgba(0,0,0,.3); }
+.wd-form { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg); padding:28px; display:flex; flex-direction:column; gap:18px; }
+.fee-info { padding:14px 16px; background:var(--bg-elevated); border-radius:var(--radius-sm); font-size:13px; }
+.fee-row { display:flex; justify-content:space-between; margin-bottom:5px; color:var(--text-secondary); }
+.fee-row.net { border-top:1px solid var(--border); padding-top:8px; margin-top:4px; font-weight:700; color:var(--text-primary); }
+.hist-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; }
+.hist-header { padding:16px 20px; border-bottom:1px solid var(--border); font-family:var(--font-display); font-size:15px; font-weight:700; }
+.hist-row { display:flex; align-items:center; gap:14px; padding:14px 20px; border-bottom:1px solid var(--border); }
+.hist-row:last-child { border-bottom:none; }
+.hist-icon { width:40px; height:40px; border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+.hist-info .amount { font-weight:700; font-size:15px; }
+.hist-info .meta { font-size:12px; color:var(--text-muted); margin-top:2px; }
+.s-pending  { background:rgba(245,200,66,.1);  color:var(--yellow); }
+.s-approved { background:rgba(34,211,160,.1); color:var(--green); }
+.s-rejected { background:rgba(255,85,114,.1);  color:var(--red); }
+</style>
+{% endblock %}
+{% block content %}
+<div style="margin-bottom:24px;">
+  <h1 style="font-family:var(--font-display);font-size:26px;font-weight:800;margin-bottom:6px;">💸 Penarikan Saldo</h1>
+  <p style="color:var(--text-muted);">Tarik saldo penjualan atau komisi afiliasi ke rekeningmu.</p>
+</div>
+
+<div class="wd-grid">
+  <div>
+    <!-- SALDO CARDS -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px;">
+      <div class="saldo-card" style="padding:24px;">
+        <div class="lbl">💰 Saldo Penjualan</div>
+        <div class="val" style="color:var(--green);">{{ user.saldo|rupiah }}</div>
+      </div>
+      <div class="saldo-card" style="padding:24px;background:linear-gradient(135deg,rgba(108,99,255,.1),rgba(34,211,160,.06));border-color:rgba(108,99,255,.2);">
+        <div class="lbl">🤝 Saldo Afiliasi</div>
+        <div class="val" style="color:var(--accent-light);">{{ user.saldo_afiliasi|rupiah }}</div>
+      </div>
+    </div>
+
+    <!-- FORM PENARIKAN -->
+    <div class="wd-form">
+      <h3 style="font-family:var(--font-display);font-size:17px;font-weight:700;margin-bottom:-4px;">Ajukan Penarikan</h3>
+
+      {% if not user.bank_account %}
+      <div style="padding:16px;background:rgba(245,200,66,.08);border:1px solid rgba(245,200,66,.2);border-radius:var(--radius-sm);font-size:14px;color:var(--yellow);">
+        <i class="fa fa-triangle-exclamation" style="margin-right:8px;"></i>
+        Kamu belum mengisi data bank. <a href="/akun" style="color:var(--yellow);font-weight:700;">Isi sekarang →</a>
+      </div>
+      {% else %}
+      <form method="POST" id="wdForm">
+        <div style="margin-bottom:18px;">
+          <label class="form-label">Sumber Dana</label>
+          <div class="source-toggle">
+            <button type="button" class="source-btn active" id="btnSaldo" onclick="setSource('saldo')">
+              💰 Saldo Penjualan
+            </button>
+            <button type="button" class="source-btn" id="btnAff" onclick="setSource('afiliasi')">
+              🤝 Saldo Afiliasi
+            </button>
+          </div>
+          <input type="hidden" name="source" id="sourceInput" value="saldo">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Jumlah Penarikan (Rp)</label>
+          <div style="position:relative;">
+            <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:14px;pointer-events:none;">Rp</span>
+            <input type="number" name="amount" id="amtInput" class="form-input" style="padding-left:38px;"
+                   placeholder="0" min="50000" step="10000" oninput="calcNet()" required>
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px;" id="minNote">
+            Minimum penarikan: {{ withdraw_min|rupiah }}
+          </div>
+        </div>
+
+        <div class="fee-info" id="feeBox" style="display:none;">
+          <div class="fee-row"><span>Jumlah penarikan</span><span id="fAmt">-</span></div>
+          <div class="fee-row"><span>Biaya admin</span><span style="color:var(--red);">- {{ withdraw_fee|rupiah }}</span></div>
+          <div class="fee-row net"><span>Kamu terima</span><span style="color:var(--green);" id="fNet">-</span></div>
+        </div>
+
+        <div style="padding:14px 16px;background:var(--bg-elevated);border-radius:var(--radius-sm);font-size:14px;">
+          <div style="color:var(--text-muted);font-size:12px;margin-bottom:6px;">Rekening Tujuan</div>
+          <div style="font-weight:700;">{{ user.bank_name }} — {{ user.bank_account }}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">a/n {{ user.kyc_name or user.username }}</div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full">
+          <i class="fa fa-paper-plane"></i> Ajukan Penarikan
+        </button>
+      </form>
+
+      <div style="font-size:12px;color:var(--text-muted);text-align:center;line-height:1.7;">
+        Penarikan diproses <strong>1-2 hari kerja</strong> setelah disetujui admin.<br>
+        Biaya transfer: {{ withdraw_fee|rupiah }} per transaksi.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- RIWAYAT -->
+  <div>
+    <div class="hist-card">
+      <div class="hist-header">📋 Riwayat Penarikan</div>
+      {% if history %}
+        {% for w in history %}
+        <div class="hist-row">
+          <div class="hist-icon
+            {% if w.status=='approved' %}s-approved
+            {% elif w.status=='rejected' %}s-rejected
+            {% else %}s-pending{% endif %}">
+            {% if w.status=='approved' %}✅{% elif w.status=='rejected' %}❌{% else %}⏳{% endif %}
+          </div>
+          <div class="hist-info" style="flex:1;">
+            <div class="amount">{{ w.net_amount|rupiah }}</div>
+            <div class="meta">
+              {{ w.bank_name }} · {{ w.source|title }}<br>
+              {{ w.created_at[:10] }}
+              {% if w.admin_note %}<br><span style="color:var(--text-muted);">{{ w.admin_note }}</span>{% endif %}
+            </div>
+          </div>
+          <span class="badge {% if w.status=='approved' %}badge-verified{% elif w.status=='rejected' %}badge-danger{% else %}badge-pending{% endif %}">
+            {{ w.status|title }}
+          </span>
+        </div>
+        {% endfor %}
+      {% else %}
+      <div class="empty-state" style="padding:40px 20px;">
+        <i class="fa fa-wallet"></i>
+        <h3>Belum ada riwayat</h3>
+        <p>Penarikanmu akan muncul di sini.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const balances = { saldo: {{ user.saldo }}, afiliasi: {{ user.saldo_afiliasi }} };
+const mins     = { saldo: {{ withdraw_min }}, afiliasi: {{ afiliasi_min }} };
+const fee      = {{ withdraw_fee }};
+let   src      = 'saldo';
+
+function setSource(s) {
+  src = s;
+  document.getElementById('sourceInput').value = s;
+  document.getElementById('btnSaldo').classList.toggle('active', s==='saldo');
+  document.getElementById('btnAff').classList.toggle('active',   s==='afiliasi');
+  document.getElementById('amtInput').max = balances[s];
+  document.getElementById('amtInput').min = mins[s];
+  document.getElementById('minNote').textContent = 'Minimum penarikan: Rp ' + mins[s].toLocaleString('id-ID');
+  calcNet();
+}
+
+function calcNet() {
+  const amt  = parseFloat(document.getElementById('amtInput').value) || 0;
+  const box  = document.getElementById('feeBox');
+  if (amt >= mins[src]) {
+    box.style.display = 'block';
+    const fmt = v => 'Rp ' + v.toLocaleString('id-ID');
+    document.getElementById('fAmt').textContent = fmt(amt);
+    document.getElementById('fNet').textContent = fmt(amt - fee);
+  } else {
+    box.style.display = 'none';
+  }
+}
+</script>
+{% endblock %}

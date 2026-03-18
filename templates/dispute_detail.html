@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}Detail Komplain #{{ d.id }} — Socrow{% endblock %}
+{% block head %}
+<style>
+.disp-wrap { max-width:860px; margin:0 auto; }
+.disp-grid { display:grid; grid-template-columns:1fr 300px; gap:24px; align-items:start; }
+@media(max-width:800px){ .disp-grid{grid-template-columns:1fr;} }
+.verdict-banner { border-radius:var(--radius-lg); padding:24px; text-align:center; margin-bottom:24px; }
+.verdict-banner.buyer   { background:rgba(108,99,255,.1);  border:1px solid rgba(108,99,255,.2); }
+.verdict-banner.seller  { background:rgba(34,211,160,.1);  border:1px solid rgba(34,211,160,.2); }
+.verdict-banner.split   { background:rgba(245,200,66,.08); border:1px solid rgba(245,200,66,.2); }
+.ev-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; margin-top:14px; }
+.ev-item { border-radius:var(--radius-sm); overflow:hidden; border:1px solid var(--border); background:var(--bg-elevated); }
+.ev-item img,.ev-item video { width:100%; height:110px; object-fit:cover; display:block; }
+.ev-item .ev-meta { padding:8px 10px; font-size:11px; color:var(--text-muted); }
+.ev-item .ev-who { font-weight:600; color:var(--text-secondary); }
+.upload-more { border:2px dashed var(--border); border-radius:var(--radius-md); padding:20px; text-align:center; cursor:pointer; position:relative; font-size:14px; color:var(--text-muted); transition:all .2s; }
+.upload-more:hover { border-color:var(--accent); color:var(--accent-light); }
+.upload-more input { position:absolute; inset:0; opacity:0; cursor:pointer; }
+.info-row { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); font-size:14px; }
+.info-row:last-child { border-bottom:none; }
+.info-row .lbl { color:var(--text-muted); }
+.info-row .val { font-weight:600; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="disp-wrap">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;flex-wrap:wrap;">
+    <a href="/ruang/{{ d.room_id }}" class="btn btn-ghost btn-sm"><i class="fa fa-arrow-left"></i> Ruang Rekber</a>
+    <h1 style="font-family:var(--font-display);font-size:22px;font-weight:800;">⚖️ Komplain #{{ d.id }}</h1>
+    <span class="badge {% if d.status=='open' %}badge-danger{% else %}badge-verified{% endif %}" style="margin-left:auto;">
+      {{ 'Sedang Ditinjau' if d.status=='open' else 'Selesai' }}
+    </span>
+  </div>
+
+  {% if d.status == 'resolved' %}
+  <div class="verdict-banner {{ d.verdict }}">
+    <div style="font-size:36px;margin-bottom:12px;">
+      {% if d.verdict=='buyer' %}🏆{% elif d.verdict=='seller' %}🏆{% else %}🤝{% endif %}
+    </div>
+    <h2 style="font-family:var(--font-display);font-size:20px;font-weight:800;margin-bottom:8px;">
+      {% if d.verdict=='buyer' %}Dimenangkan Pembeli
+      {% elif d.verdict=='seller' %}Dimenangkan Penjual
+      {% else %}Diselesaikan 50/50{% endif %}
+    </h2>
+    {% if d.verdict_note %}
+    <p style="font-size:14px;color:var(--text-secondary);">{{ d.verdict_note }}</p>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <div class="disp-grid">
+    <!-- MAIN -->
+    <div>
+      <!-- DETAIL KOMPLAIN -->
+      <div class="card" style="padding:24px;margin-bottom:20px;">
+        <h3 style="font-family:var(--font-display);font-size:16px;font-weight:700;margin-bottom:16px;">📋 Detail Komplain</h3>
+        <div class="info-row"><span class="lbl">Alasan</span><span class="val" style="color:var(--red);">{{ d.reason }}</span></div>
+        <div class="info-row"><span class="lbl">Dibuka oleh</span><span class="val">{{ d.buyer_name if d.opened_by == d.buyer_id else d.seller_name }}</span></div>
+        <div class="info-row"><span class="lbl">Tanggal</span><span class="val">{{ d.created_at[:16] }}</span></div>
+        {% if d.deadline and d.status=='open' %}
+        <div class="info-row"><span class="lbl">Deadline admin</span><span class="val" style="color:var(--yellow);">{{ d.deadline[:16] }}</span></div>
+        {% endif %}
+        {% if d.detail %}
+        <div style="margin-top:14px;padding:14px;background:var(--bg-elevated);border-radius:var(--radius-sm);font-size:14px;color:var(--text-secondary);line-height:1.7;">
+          {{ d.detail }}
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- BUKTI -->
+      <div class="card" style="padding:24px;margin-bottom:20px;">
+        <h3 style="font-family:var(--font-display);font-size:16px;font-weight:700;margin-bottom:4px;">📸 Bukti yang Diupload</h3>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">Kedua pihak dapat mengupload bukti untuk mendukung klaimnya.</p>
+
+        {% if evidences %}
+        <div class="ev-grid">
+          {% for ev in evidences %}
+          <div class="ev-item">
+            <a href="/static/uploads/evidence/{{ ev.file_url }}" target="_blank">
+              {% if ev.file_type == 'image' %}
+              <img src="/static/uploads/evidence/{{ ev.file_url }}" alt="bukti" onerror="this.src='/static/placeholder.png'">
+              {% elif ev.file_type == 'video' %}
+              <video src="/static/uploads/evidence/{{ ev.file_url }}"></video>
+              {% else %}
+              <div style="height:110px;display:flex;align-items:center;justify-content:center;font-size:32px;">📄</div>
+              {% endif %}
+            </a>
+            <div class="ev-meta">
+              <div class="ev-who">{{ ev.username }}</div>
+              {% if ev.description %}<div>{{ ev.description }}</div>{% endif %}
+              <div>{{ ev.created_at[:10] }}</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p style="color:var(--text-muted);font-size:14px;">Belum ada bukti yang diupload.</p>
+        {% endif %}
+
+        {% if d.status == 'open' and session.user_id in [d.buyer_id, d.seller_id] %}
+        <div style="margin-top:16px;">
+          <form method="POST" enctype="multipart/form-data" action="/dispute/upload_bukti/{{ d.id }}">
+            <div class="upload-more">
+              <input type="file" name="evidence" multiple accept="image/*,video/mp4,.pdf" onchange="this.form.submit()">
+              <i class="fa fa-plus-circle" style="margin-right:8px;"></i> Upload Bukti Tambahan
+            </div>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div>
+      <div class="card" style="padding:20px;margin-bottom:16px;">
+        <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;">Pihak yang Terlibat</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="avatar" style="width:36px;height:36px;font-size:13px;">{{ d.buyer_name[0].upper() }}</div>
+            <div>
+              <div style="font-weight:700;font-size:14px;">{{ d.buyer_name }}</div>
+              <div style="font-size:12px;color:var(--accent-light);">Pembeli</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="avatar" style="width:36px;height:36px;font-size:13px;background:linear-gradient(135deg,var(--green),var(--accent));">{{ d.seller_name[0].upper() }}</div>
+            <div>
+              <div style="font-weight:700;font-size:14px;">{{ d.seller_name }}</div>
+              <div style="font-size:12px;color:var(--green);">Penjual</div>
+            </div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="info-row" style="border:none;padding-bottom:0;">
+          <span class="lbl">Nilai Sengketa</span>
+          <span class="val" style="color:var(--green);">{{ d.price_deal|rupiah }}</span>
+        </div>
+      </div>
+
+      <!-- ADMIN VERDICT FORM -->
+      {% if session.email == admin_email and d.status == 'open' %}
+      <div class="card" style="padding:20px;border-color:rgba(255,85,114,.2);background:rgba(255,85,114,.03);">
+        <div style="font-size:13px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;">
+          👑 Keputusan Admin
+        </div>
+        <form method="POST" action="/admin/dispute/{{ d.id }}/verdict">
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label">Keputusan</label>
+            <select name="verdict" class="form-input" required>
+              <option value="">Pilih keputusan...</option>
+              <option value="buyer">🏆 Menangkan Pembeli (refund)</option>
+              <option value="seller">🏆 Menangkan Penjual (release)</option>
+              <option value="split">🤝 Split 50/50</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label">Catatan Admin</label>
+            <textarea name="verdict_note" class="form-input" rows="3" placeholder="Alasan keputusan..."></textarea>
+          </div>
+          <button type="submit" class="btn btn-danger btn-full"
+                  onclick="return confirm('Keputusan ini final dan tidak bisa diubah. Lanjutkan?')">
+            <i class="fa fa-gavel"></i> Tetapkan Keputusan
+          </button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

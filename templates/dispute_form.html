@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Ajukan Komplain — Socrow{% endblock %}
+{% block head %}
+<style>
+.disp-wrap { max-width:680px; margin:0 auto; }
+.disp-header { margin-bottom:28px; }
+.disp-header h1 { font-family:var(--font-display); font-size:26px; font-weight:800; margin-bottom:6px; }
+.disp-header p { color:var(--text-muted); }
+.disp-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-xl); overflow:hidden; }
+.disp-card-header { padding:20px 28px; border-bottom:1px solid var(--border); background:rgba(255,85,114,.04); }
+.disp-card-header h2 { font-family:var(--font-display); font-size:18px; font-weight:700; color:var(--red); }
+.disp-form { padding:28px; display:flex; flex-direction:column; gap:20px; }
+.reason-grid { display:flex; flex-wrap:wrap; gap:10px; }
+.reason-opt input[type=radio] { position:absolute; opacity:0; pointer-events:none; }
+.reason-opt label { display:flex; align-items:center; gap:8px; padding:10px 16px; background:var(--bg-elevated); border:1.5px solid var(--border); border-radius:var(--radius-sm); font-size:14px; cursor:pointer; transition:all .2s; color:var(--text-secondary); }
+.reason-opt input:checked + label { border-color:var(--red); background:rgba(255,85,114,.08); color:var(--text-primary); }
+.reason-opt label:hover { border-color:var(--border-hover); color:var(--text-primary); }
+.upload-zone { border:2px dashed var(--border); border-radius:var(--radius-md); padding:24px; text-align:center; cursor:pointer; transition:all .2s; color:var(--text-muted); position:relative; }
+.upload-zone:hover { border-color:var(--red); color:var(--red); }
+.upload-zone input { position:absolute; inset:0; opacity:0; cursor:pointer; }
+.transaction-info { padding:16px 20px; background:var(--bg-elevated); border-radius:var(--radius-sm); }
+.ti-row { display:flex; justify-content:space-between; font-size:14px; padding:4px 0; }
+.ti-row .lbl { color:var(--text-muted); }
+.ti-row .val { font-weight:600; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="disp-wrap">
+  <a href="/ruang/{{ room.id }}" class="btn btn-ghost btn-sm" style="margin-bottom:20px;">
+    <i class="fa fa-arrow-left"></i> Kembali
+  </a>
+
+  <div class="disp-header">
+    <h1>⚠️ Ajukan Komplain</h1>
+    <p>Jelaskan masalahmu dengan detail. Admin akan meninjau dalam {{ 24 }} jam.</p>
+  </div>
+
+  <div class="disp-card">
+    <div class="disp-card-header">
+      <h2><i class="fa fa-triangle-exclamation" style="margin-right:8px;"></i>Formulir Komplain</h2>
+      <p style="font-size:13px;color:var(--text-muted);margin-top:4px;">Setelah komplain diajukan, dana akan dibekukan sampai admin memutuskan.</p>
+    </div>
+
+    <div class="disp-form">
+      <!-- INFO TRANSAKSI -->
+      <div class="transaction-info">
+        <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Detail Transaksi</div>
+        <div class="ti-row"><span class="lbl">Barang</span><span class="val">{{ room.barang[:40] if room.barang else '-' }}</span></div>
+        <div class="ti-row"><span class="lbl">Nilai</span><span class="val" style="color:var(--green);">{{ room.price_deal|rupiah }}</span></div>
+        <div class="ti-row"><span class="lbl">Status</span><span class="val">{{ room.status|replace('_',' ')|title }}</span></div>
+      </div>
+
+      <form method="POST" enctype="multipart/form-data" id="dispForm">
+        <!-- ALASAN -->
+        <div class="form-group">
+          <label class="form-label">Alasan Komplain <span style="color:var(--red);">*</span></label>
+          <div class="reason-grid">
+            {% for r in reasons %}
+            <div class="reason-opt" style="position:relative;">
+              <input type="radio" name="reason" id="r{{ loop.index }}" value="{{ r }}" required>
+              <label for="r{{ loop.index }}">{{ r }}</label>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- DETAIL -->
+        <div class="form-group">
+          <label class="form-label">Penjelasan Detail</label>
+          <textarea name="detail" class="form-input" rows="4"
+                    placeholder="Ceritakan kronologis masalahmu secara detail. Semakin detail semakin mudah admin menilai."
+                    maxlength="2000"></textarea>
+        </div>
+
+        <!-- UPLOAD BUKTI -->
+        <div class="form-group">
+          <label class="form-label">Upload Bukti <span style="color:var(--text-muted);">(foto/video/PDF, maks 5 file)</span></label>
+          <div class="upload-zone">
+            <input type="file" name="evidence" multiple accept="image/*,video/mp4,.pdf">
+            <i class="fa fa-cloud-arrow-up" style="font-size:28px;display:block;margin-bottom:10px;"></i>
+            <strong style="display:block;margin-bottom:4px;">Klik atau drag file ke sini</strong>
+            <small>Foto kondisi barang, screenshot chat, bukti pembayaran, dll.</small>
+          </div>
+          <div id="fileList" style="margin-top:8px;font-size:13px;color:var(--text-muted);"></div>
+        </div>
+
+        <div style="padding:14px 16px;background:rgba(245,200,66,.06);border:1px solid rgba(245,200,66,.15);border-radius:var(--radius-sm);font-size:13px;color:var(--yellow);">
+          <i class="fa fa-circle-info" style="margin-right:8px;"></i>
+          Pastikan bukti yang kamu upload <strong>jelas dan relevan</strong>. Bukti palsu atau manipulasi dapat mengakibatkan penutupan akun.
+        </div>
+
+        <div style="display:flex;gap:12px;">
+          <a href="/ruang/{{ room.id }}" class="btn btn-ghost">Batal</a>
+          <button type="submit" class="btn btn-danger" style="flex:1;" onclick="return confirm('Yakin ingin mengajukan komplain? Dana akan dibekukan.')">
+            <i class="fa fa-triangle-exclamation"></i> Ajukan Komplain
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.querySelector('input[type=file]').addEventListener('change', function() {
+  const list = document.getElementById('fileList');
+  list.innerHTML = Array.from(this.files).map(f =>
+    `<span style="display:inline-flex;align-items:center;gap:6px;margin:3px 6px 3px 0;padding:4px 10px;background:var(--bg-elevated);border-radius:100px;">📎 ${f.name}</span>`
+  ).join('');
+});
+</script>
+{% endblock %}

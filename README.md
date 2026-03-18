@@ -1,66 +1,45 @@
-# 🛡️ Socrow — Platform Sosial Rekber
+# 🛡️ Socrow v2.0 — Platform Sosial Rekber
 
-> Platform sosial media dengan sistem rekening bersama (rekber) terintegrasi. Jual beli aman, transparan, dan terpercaya.
-
-![Python](https://img.shields.io/badge/Python-3.10+-blue)
-![Flask](https://img.shields.io/badge/Flask-3.0-green)
-![Xendit](https://img.shields.io/badge/Payment-Xendit-purple)
+> Platform sosial media dengan sistem rekening bersama (rekber), afiliasi, dispute mediasi, dan withdrawal terintegrasi.
 
 ---
 
-## ✨ Fitur Utama
+## ✨ Fitur Phase 1 (v2.0)
 
-| Fitur | Deskripsi |
-|-------|-----------|
-| 🔒 Rekber Otomatis | Dana pembeli disimpan sampai barang diterima |
-| 💳 Payment Gateway | Terintegrasi Xendit (transfer, QRIS, dll) |
-| 🪪 KYC Penjual | Verifikasi identitas sebelum berjualan |
-| 💬 Chat Room | Komunikasi buyer & seller per transaksi |
-| 🔔 Notifikasi | Alert real-time setiap update transaksi |
-| 👑 Admin Panel | Kelola KYC, sengketa, dan statistik platform |
-| ❤️ Feed Sosial | Post foto/video + like & komentar |
+| Fitur | Status |
+|-------|--------|
+| 🔒 Rekber otomatis | ✅ |
+| 💸 Withdrawal saldo penjualan | ✅ |
+| 🤝 Program afiliasi (fee-share 0.5%) | ✅ |
+| ⚖️ Dispute room + mediasi admin | ✅ |
+| 📸 Upload bukti sengketa | ✅ |
+| ⭐ Rating & review penjual | ✅ |
+| 📦 Produk fisik (resi) & digital (file) | ✅ |
+| 📂 Download file digital setelah transaksi | ✅ |
+| 👑 Panel admin: KYC, dispute, withdrawal | ✅ |
+| 🔔 Notifikasi real-time | ✅ |
+| 📊 Audit log semua aksi | ✅ |
+| 🛡️ Mode demo tanpa Xendit | ✅ |
 
 ---
 
-## 🚀 Cara Menjalankan
-
-### 1. Clone & Setup
+## 🚀 Quick Start
 
 ```bash
-git clone https://github.com/username/sosmed-rekber.git
-cd sosmed-rekber
-```
-
-### 2. Buat Virtual Environment
-
-```bash
-python -m venv venv
-source venv/bin/activate        # Linux/Mac
-venv\Scripts\activate           # Windows
-```
-
-### 3. Install Dependencies
-
-```bash
+# 1. Install dependencies
 pip install -r requirements.txt
-```
 
-### 4. Konfigurasi Environment
-
-```bash
-cp .env.example .env
-# Edit .env dan isi nilai yang diperlukan
-```
-
-### 5. Inisialisasi Database
-
-```bash
+# 2. Init database
 python database.py
-```
 
-### 6. Jalankan Aplikasi
+# 3. Buat akun demo
+python seed.py
 
-```bash
+# 4. Konfigurasi .env
+cp .env.example .env
+# Edit .env: ADMIN_EMAIL=admin@socrow.com
+
+# 5. Jalankan
 python app.py
 ```
 
@@ -68,94 +47,96 @@ Buka: **http://127.0.0.1:5000**
 
 ---
 
+## 🔑 Akun Demo
+
+| Username | Email | Password | Role |
+|----------|-------|----------|------|
+| admin | admin@socrow.com | admin123 | Admin |
+| penjual | penjual@socrow.com | penjual123 | Penjual |
+| pembeli | pembeli@socrow.com | pembeli123 | Pembeli |
+
+---
+
+## 💡 Alur Afiliasi
+
+```
+Fee normal Socrow = 2% dari transaksi
+
+Dengan afiliasi:
+  → Platform dapat: 1.5%
+  → Afiliator dapat: 0.5% → masuk saldo_afiliasi
+  → Bisa ditarik min Rp 10.000
+```
+
+**Tidak ada modal keluar** — platform hanya berbagi sebagian fee yang sudah diterima.
+
+---
+
+## ⚖️ Alur Dispute
+
+```
+1. Pembeli klik "Komplain" → status = 'komplain'
+2. Kedua pihak upload bukti di dispute room
+3. Admin tinjau dalam 24 jam
+4. Admin putuskan: buyer / seller / split 50-50
+5. Dana disalurkan otomatis sesuai keputusan
+```
+
+---
+
+## 💸 Alur Withdrawal
+
+```
+1. Penjual ajukan withdrawal (min Rp 50.000)
+2. Biaya admin Rp 2.500 dipotong
+3. Admin approve → dana ditransfer manual
+4. Jika ditolak → saldo dikembalikan otomatis
+```
+
+---
+
 ## 🗂️ Struktur Project
 
 ```
-sosmed-rekber/
-├── app.py              # Backend Flask utama
-├── database.py         # Schema & inisialisasi DB
-├── requirements.txt    # Dependencies Python
-├── .env.example        # Template konfigurasi
-├── .gitignore          # File yang dikecualikan dari Git
+sosmed-rekber-v2/
+├── app.py                    # Backend Flask (semua route)
+├── database.py               # Schema database v2
+├── seed.py                   # Akun demo
+├── requirements.txt
+├── .env.example
 ├── static/
-│   ├── style.css       # Global styles tambahan
-│   └── uploads/        # Upload foto/video (auto-created)
+│   ├── style.css
+│   └── uploads/
+│       ├── digital/          # File produk digital (private)
+│       └── evidence/         # Bukti dispute
 └── templates/
-    ├── base.html        # Layout dasar (navbar, footer)
-    ├── index.html       # Halaman beranda / feed
-    ├── login.html       # Halaman login
-    ├── daftar.html      # Halaman registrasi
-    ├── tambah.html      # Buat post / produk
-    ├── dasbor.html      # Dashboard transaksi
-    ├── ruang_rekber.html # Chat room per transaksi
-    ├── akun.html        # Profil & pengaturan akun
-    ├── notifikasi.html  # Pusat notifikasi
-    ├── admin_kyc.html   # Panel admin KYC
-    ├── syarat.html      # Syarat & ketentuan
-    ├── tentang.html     # Halaman tentang kami
-    └── error.html       # Halaman error (403/404/500)
+    ├── base.html             # Layout + navbar
+    ├── index.html            # Feed utama
+    ├── login.html / daftar.html
+    ├── dasbor.html           # Dashboard transaksi
+    ├── ruang_rekber.html     # Chat + aksi transaksi
+    ├── withdraw.html         # ✨ Penarikan saldo
+    ├── afiliasi.html         # ✨ Program afiliasi
+    ├── dispute_form.html     # ✨ Form komplain
+    ├── dispute_detail.html   # ✨ Detail + bukti + verdict
+    ├── admin_disputes.html   # ✨ Admin kelola dispute
+    ├── admin_withdrawals.html# ✨ Admin kelola penarikan
+    ├── admin_kyc.html        # Admin verifikasi KYC
+    ├── akun.html             # Profil + KYC + password
+    ├── notifikasi.html
+    ├── demo_bayar.html       # Simulasi Xendit
+    ├── syarat.html / tentang.html / error.html
 ```
 
 ---
 
-## 🔐 Keamanan yang Diterapkan
+## 🔐 Keamanan
 
-- ✅ **Password hashing** — Werkzeug `pbkdf2:sha256`
-- ✅ **Secret key dari environment** — tidak hardcoded
-- ✅ **Decorator login_required & admin_required** — proteksi route
-- ✅ **Validasi input** — username, email, password strength
-- ✅ **Proteksi IDOR** — cek kepemilikan sebelum aksi
-- ✅ **File upload validation** — whitelist ekstensi
-- ✅ **Error handler** — 403, 404, 500
-- ✅ **WAL mode SQLite** — performa & keamanan DB
-- ✅ **`.gitignore`** — `.env`, `*.db`, `uploads/` tidak ter-commit
-
----
-
-## 💡 Konfigurasi Xendit
-
-1. Daftar di [dashboard.xendit.co](https://dashboard.xendit.co)
-2. Copy **Secret Key** dari Settings → Developers
-3. Daftarkan **Webhook URL**: `https://domainmu.com/xendit_webhook`
-4. Copy **Callback Token** dan simpan di `.env`
-
----
-
-## 📦 Dependencies
-
-```
-Flask>=3.0.0
-Werkzeug>=3.0.0
-xendit-python>=3.0.0
-python-dotenv>=1.0.0
-```
-
----
-
-## 🚀 Deploy ke Production
-
-### Gunicorn + Nginx (disarankan)
-
-```bash
-pip install gunicorn
-gunicorn -w 4 -b 0.0.0.0:8000 app:app
-```
-
-### Variabel Environment Production
-
-```env
-SECRET_KEY=random_string_sangat_panjang
-XENDIT_SECRET_KEY=xnd_production_...
-DEBUG=False
-BASE_URL=https://domainmu.com
-```
-
----
-
-## 📄 Lisensi
-
-MIT License — bebas digunakan dan dimodifikasi.
-
----
-
-<p align="center">Made with ❤️ — <strong>Socrow</strong></p>
+- Password hashing (Werkzeug pbkdf2)
+- Secret key dari environment
+- `@login_required` & `@admin_required` decorator
+- Validasi kepemilikan sebelum aksi (anti IDOR)
+- File upload whitelist extension
+- Audit log semua aksi penting
+- File digital hanya bisa didownload pembeli setelah `status=selesai`
+- Bukti dispute disimpan terpisah di `/uploads/evidence/`

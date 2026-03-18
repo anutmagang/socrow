@@ -1,0 +1,431 @@
+{% extends "base.html" %}
+{% block title %}Simulasi Pembayaran — Socrow Demo{% endblock %}
+
+{% block head %}
+<style>
+    .demo-wrap {
+        max-width: 520px;
+        margin: 0 auto;
+        padding-top: 20px;
+    }
+
+    /* BANNER MODE DEMO */
+    .demo-banner {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 16px;
+        background: rgba(245,200,66,0.1);
+        border: 1px solid rgba(245,200,66,0.25);
+        border-radius: var(--radius-sm);
+        font-size: 13px;
+        color: var(--yellow);
+        font-weight: 600;
+        margin-bottom: 24px;
+    }
+
+    /* PAYMENT CARD */
+    .payment-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        overflow: hidden;
+        box-shadow: var(--shadow-elevated);
+        animation: fadeUp 0.4s ease;
+    }
+
+    @keyframes fadeUp {
+        from { opacity:0; transform:translateY(20px); }
+        to   { opacity:1; transform:translateY(0); }
+    }
+
+    /* HEADER */
+    .pay-header {
+        background: linear-gradient(135deg, #1a1a28 0%, #16161f 100%);
+        padding: 28px 28px 24px;
+        border-bottom: 1px solid var(--border);
+        text-align: center;
+    }
+
+    .pay-logo {
+        font-family: var(--font-display);
+        font-size: 20px;
+        font-weight: 800;
+        margin-bottom: 16px;
+        letter-spacing: -0.5px;
+    }
+
+    .pay-logo span { color: var(--accent); }
+
+    .pay-amount-label {
+        font-size: 13px;
+        color: var(--text-muted);
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .pay-amount {
+        font-family: var(--font-display);
+        font-size: 40px;
+        font-weight: 800;
+        color: var(--text-primary);
+        letter-spacing: -1.5px;
+        margin-bottom: 6px;
+    }
+
+    .pay-desc {
+        font-size: 13px;
+        color: var(--text-muted);
+        max-width: 320px;
+        margin: 0 auto;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* ORDER DETAIL */
+    .order-detail {
+        padding: 20px 28px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .order-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 14px;
+        padding: 6px 0;
+    }
+
+    .order-row .lbl { color: var(--text-muted); }
+    .order-row .val { font-weight: 600; color: var(--text-primary); }
+    .order-row.total {
+        border-top: 1px solid var(--border);
+        margin-top: 8px;
+        padding-top: 12px;
+    }
+    .order-row.total .val {
+        font-family: var(--font-display);
+        font-size: 18px;
+        color: var(--green);
+    }
+
+    /* METODE */
+    .metode-section {
+        padding: 20px 28px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .metode-title {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 14px;
+    }
+
+    .metode-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .metode-option {
+        position: relative;
+    }
+
+    .metode-option input[type="radio"] {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .metode-label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 14px;
+        background: var(--bg-elevated);
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        user-select: none;
+    }
+
+    .metode-label:hover {
+        border-color: var(--border-hover);
+        color: var(--text-primary);
+    }
+
+    .metode-option input:checked + .metode-label {
+        border-color: var(--accent);
+        background: rgba(108,99,255,0.08);
+        color: var(--text-primary);
+    }
+
+    .metode-icon {
+        font-size: 20px;
+        width: 28px;
+        text-align: center;
+    }
+
+    /* BOTTOM */
+    .pay-bottom {
+        padding: 20px 28px 28px;
+    }
+
+    .pay-note {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 12px 14px;
+        background: rgba(34,211,160,0.05);
+        border: 1px solid rgba(34,211,160,0.12);
+        border-radius: var(--radius-sm);
+        font-size: 13px;
+        color: var(--text-muted);
+        margin-bottom: 18px;
+        line-height: 1.5;
+    }
+
+    .pay-note i { color: var(--green); margin-top: 1px; flex-shrink: 0; }
+
+    /* TOMBOL BAYAR */
+    .pay-btn {
+        width: 100%;
+        padding: 16px;
+        background: var(--accent);
+        color: white;
+        border: none;
+        border-radius: var(--radius-md);
+        font-family: var(--font-display);
+        font-size: 17px;
+        font-weight: 700;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        transition: all 0.2s;
+        letter-spacing: -0.3px;
+    }
+
+    .pay-btn:hover {
+        background: var(--accent-light);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 28px var(--accent-glow);
+    }
+
+    .pay-btn:active {
+        transform: translateY(0);
+    }
+
+    /* LOADING STATE */
+    .pay-btn.loading {
+        pointer-events: none;
+        opacity: 0.7;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    .spinner {
+        width: 18px; height: 18px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+        display: none;
+    }
+
+    .pay-btn.loading .spinner { display: block; }
+    .pay-btn.loading .btn-text { display: none; }
+
+    .cancel-link {
+        display: block;
+        text-align: center;
+        margin-top: 14px;
+        font-size: 13px;
+        color: var(--text-muted);
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+    .cancel-link:hover { color: var(--text-secondary); }
+
+    /* TIMER */
+    .timer-bar {
+        height: 3px;
+        background: var(--border);
+        border-radius: 2px;
+        overflow: hidden;
+        margin-bottom: 20px;
+    }
+
+    .timer-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--accent), var(--green));
+        border-radius: 2px;
+        width: 100%;
+        animation: timerCount 900s linear forwards;
+    }
+
+    @keyframes timerCount {
+        from { width: 100%; }
+        to   { width: 0%; }
+    }
+
+    .timer-label {
+        text-align: center;
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-bottom: 16px;
+    }
+
+    .timer-label span { color: var(--yellow); font-weight: 600; font-variant-numeric: tabular-nums; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="demo-wrap">
+
+    <!-- BANNER DEMO MODE -->
+    <div class="demo-banner">
+        <i class="fa fa-flask"></i>
+        MODE DEMO — Tidak ada uang sungguhan yang diproses
+    </div>
+
+    <div class="payment-card">
+        <!-- HEADER -->
+        <div class="pay-header">
+            <div class="pay-logo">So<span>crow</span> <span style="font-size:13px; color:var(--text-muted); font-weight:400; margin-left:4px; font-family:var(--font-body);">Pembayaran Aman</span></div>
+            <div class="pay-amount-label">Total Pembayaran</div>
+            <div class="pay-amount">{{ (room.price_deal + 2500) | rupiah }}</div>
+            <div class="pay-desc">{{ room.barang }}</div>
+        </div>
+
+        <!-- ORDER DETAIL -->
+        <div class="order-detail">
+            <div class="order-row">
+                <span class="lbl">Harga barang</span>
+                <span class="val">{{ room.price_deal | rupiah }}</span>
+            </div>
+            <div class="order-row">
+                <span class="lbl">Biaya admin</span>
+                <span class="val">Rp 2.500</span>
+            </div>
+            <div class="order-row">
+                <span class="lbl">Penjual</span>
+                <span class="val">{{ room.seller_name }}</span>
+            </div>
+            <div class="order-row total">
+                <span class="lbl" style="font-weight:700; color:var(--text-secondary);">Total</span>
+                <span class="val">{{ (room.price_deal + 2500) | rupiah }}</span>
+            </div>
+        </div>
+
+        <!-- METODE PEMBAYARAN -->
+        <div class="metode-section">
+            <div class="metode-title"><i class="fa fa-credit-card" style="margin-right:6px;"></i>Pilih Metode Pembayaran</div>
+            <div class="metode-grid" id="metodeGrid">
+                {% for m in [
+                    ('🏦', 'Transfer Bank', 'Transfer Bank'),
+                    ('📱', 'QRIS', 'QRIS'),
+                    ('💚', 'GoPay', 'GoPay'),
+                    ('💙', 'OVO', 'OVO'),
+                    ('🟡', 'Dana', 'Dana'),
+                    ('💳', 'Kartu Kredit', 'Kartu Kredit'),
+                ] %}
+                <div class="metode-option">
+                    <input type="radio" name="metode_display" id="m_{{ loop.index }}" value="{{ m[2] }}"
+                           {% if loop.first %}checked{% endif %}>
+                    <label class="metode-label" for="m_{{ loop.index }}">
+                        <span class="metode-icon">{{ m[0] }}</span>
+                        <span>{{ m[1] }}</span>
+                    </label>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- BOTTOM -->
+        <div class="pay-bottom">
+            <!-- TIMER -->
+            <div class="timer-label">
+                Selesaikan pembayaran dalam <span id="timerDisplay">15:00</span>
+            </div>
+            <div class="timer-bar">
+                <div class="timer-fill"></div>
+            </div>
+
+            <div class="pay-note">
+                <i class="fa fa-shield-halved"></i>
+                <span>Dana kamu akan disimpan aman oleh Socrow dan hanya diteruskan ke penjual setelah kamu konfirmasi barang diterima.</span>
+            </div>
+
+            <form method="POST" action="/demo_bayar/{{ ext_id }}/proses" id="payForm">
+                <input type="hidden" name="metode" id="metodeInput" value="Transfer Bank">
+                <button type="submit" class="pay-btn" id="payBtn" onclick="startPay(this)">
+                    <div class="spinner"></div>
+                    <span class="btn-text">
+                        <i class="fa fa-lock" style="margin-right:6px;"></i>
+                        Bayar Sekarang
+                    </span>
+                </button>
+            </form>
+
+            <a href="/dasbor" class="cancel-link">
+                <i class="fa fa-xmark" style="margin-right:4px;"></i> Batalkan pembayaran
+            </a>
+        </div>
+    </div>
+
+    <div style="text-align:center; margin-top:20px; font-size:12px; color:var(--text-muted); line-height:1.8;">
+        🔒 Transaksi dienkripsi &nbsp;·&nbsp; Powered by <strong>Socrow Demo</strong><br>
+        <span style="color:rgba(255,255,255,0.15);">ext_id: {{ ext_id }}</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Sync metode radio ke hidden input
+    document.querySelectorAll('input[name="metode_display"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            document.getElementById('metodeInput').value = radio.value;
+        });
+    });
+
+    // Loading state saat submit
+    function startPay(btn) {
+        setTimeout(() => {
+            btn.classList.add('loading');
+        }, 10);
+    }
+
+    // Countdown timer 15 menit
+    let total = 15 * 60;
+    const timerEl = document.getElementById('timerDisplay');
+
+    function updateTimer() {
+        const m = Math.floor(total / 60).toString().padStart(2, '0');
+        const s = (total % 60).toString().padStart(2, '0');
+        timerEl.textContent = `${m}:${s}`;
+        if (total <= 0) {
+            timerEl.textContent = '00:00';
+            timerEl.style.color = 'var(--red)';
+            return;
+        }
+        total--;
+    }
+
+    updateTimer();
+    setInterval(updateTimer, 1000);
+</script>
+{% endblock %}

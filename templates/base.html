@@ -425,12 +425,17 @@
             <a href="/" class="nav-btn"><i class="fa fa-house"></i> <span>Beranda</span></a>
             <a href="/tambah" class="nav-btn"><i class="fa fa-plus-circle"></i> <span>Post</span></a>
             <a href="/dasbor" class="nav-btn"><i class="fa fa-shield-halved"></i> <span>Rekber</span></a>
+            <a href="/afiliasi" class="nav-btn"><i class="fa fa-handshake"></i> <span>Afiliasi</span></a>
+            <a href="/withdraw" class="nav-btn"><i class="fa fa-wallet"></i> <span>Tarik</span></a>
             <a href="/notifikasi" class="nav-btn" style="position:relative">
                 <i class="fa fa-bell"></i>
                 {% set nc = get_notif_count() %}
                 {% if nc > 0 %}<span class="notif-badge">{{ nc }}</span>{% endif %}
             </a>
             <a href="/akun" class="nav-btn nav-btn-primary"><i class="fa fa-user"></i> <span>{{ session.username }}</span></a>
+            {% if session.email == admin_email %}
+            <a href="/admin/kyc" class="nav-btn" style="color:var(--red);" title="Panel Admin"><i class="fa fa-crown"></i></a>
+            {% endif %}
         {% else %}
             <a href="/login" class="nav-btn">Masuk</a>
             <a href="/daftar" class="nav-btn nav-btn-primary">Daftar Gratis</a>
