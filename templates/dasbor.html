@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}Dasbor Rekber — Socrow{% endblock %}
+
+{% block head %}
+<style>
+    .dash-header {
+        margin-bottom: 28px;
+    }
+    .dash-header h1 {
+        font-family: var(--font-display);
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        margin-bottom: 6px;
+    }
+    .dash-header p { color: var(--text-muted); }
+
+    .rooms-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .room-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 20px 24px;
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 16px;
+        align-items: center;
+        transition: all 0.2s;
+        text-decoration: none;
+        color: inherit;
+        animation: fadeUp 0.35s ease both;
+    }
+
+    .room-card:hover {
+        border-color: var(--border-hover);
+        transform: translateX(4px);
+        background: var(--bg-elevated);
+    }
+
+    @keyframes fadeUp {
+        from { opacity:0; transform:translateY(12px); }
+        to   { opacity:1; transform:translateY(0); }
+    }
+
+    .room-icon {
+        width: 48px; height: 48px;
+        border-radius: var(--radius-sm);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 22px;
+        flex-shrink: 0;
+    }
+
+    .room-info .barang {
+        font-weight: 600;
+        font-size: 16px;
+        margin-bottom: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 400px;
+    }
+
+    .room-info .meta {
+        font-size: 13px;
+        color: var(--text-muted);
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .room-right {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 8px;
+    }
+
+    .room-price {
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 17px;
+        color: var(--text-primary);
+    }
+
+    .role-tag {
+        font-size: 11px;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: 100px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .role-buyer  { background: rgba(108,99,255,0.12); color: var(--accent-light); }
+    .role-seller { background: rgba(34,211,160,0.12);  color: var(--green); }
+
+    @media (max-width: 600px) {
+        .room-card { grid-template-columns: auto 1fr; }
+        .room-right { display: none; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dash-header">
+    <h1>🛡️ Dasbor Rekber</h1>
+    <p>Kelola semua transaksi jual beli kamu dalam satu tempat.</p>
+</div>
+
+{% if rooms %}
+<div class="rooms-grid">
+    {% for r in rooms %}
+    {% set is_buyer = r.buyer_id == session.user_id %}
+    <a href="/ruang/{{ r.id }}" class="room-card" style="animation-delay: {{ loop.index0 * 0.05 }}s;">
+        <div class="room-icon" style="
+            {% if r.status == 'selesai' %}background:rgba(34,211,160,0.12);
+            {% elif r.status == 'komplain' %}background:rgba(255,85,114,0.12);
+            {% elif r.status == 'dibayar' %}background:rgba(108,99,255,0.12);
+            {% else %}background:rgba(245,200,66,0.12);{% endif %}
+        ">
+            {% if r.status == 'selesai' %}✅
+            {% elif r.status == 'komplain' %}⚠️
+            {% elif r.status == 'dibayar' %}💜
+            {% else %}⏳{% endif %}
+        </div>
+
+        <div class="room-info">
+            <div class="barang">{{ r.barang }}</div>
+            <div class="meta">
+                <span><i class="fa fa-user" style="margin-right:4px;"></i>
+                    {% if is_buyer %}Penjual: <strong>{{ r.seller_name }}</strong>
+                    {% else %}Pembeli: <strong>{{ r.buyer_name }}</strong>{% endif %}
+                </span>
+                <span class="status-badge status-{{ r.status }}">
+                    {{ r.status | replace('_', ' ') | title }}
+                </span>
+            </div>
+        </div>
+
+        <div class="room-right">
+            <div class="room-price">{{ r.price_deal | rupiah }}</div>
+            <div class="role-tag {{ 'role-buyer' if is_buyer else 'role-seller' }}">
+                {{ 'Pembeli' if is_buyer else 'Penjual' }}
+            </div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card empty-state">
+    <i class="fa fa-shield-halved"></i>
+    <h3>Belum ada transaksi</h3>
+    <p>Mulai belanja atau jual produk untuk menggunakan rekber Socrow.</p>
+    <a href="/" class="btn btn-primary" style="margin-top:16px;">Jelajahi Produk</a>
+</div>
+{% endif %}
+{% endblock %}

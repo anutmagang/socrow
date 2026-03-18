@@ -1,0 +1,36 @@
+# Environment variables — JANGAN pernah commit file ini!
+.env
+
+# Database SQLite
+*.db
+*.sqlite
+*.sqlite3
+
+# Upload files user
+static/uploads/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

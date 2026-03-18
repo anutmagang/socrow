@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}Masuk — Socrow{% endblock %}
+
+{% block head %}
+<style>
+    .auth-wrap {
+        min-height: calc(100vh - var(--nav-height));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 16px;
+    }
+
+    .auth-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        padding: 44px 40px;
+        width: 100%;
+        max-width: 420px;
+        animation: fadeUp 0.4s ease;
+        box-shadow: var(--shadow-elevated);
+    }
+
+    @keyframes fadeUp {
+        from { opacity:0; transform:translateY(24px); }
+        to   { opacity:1; transform:translateY(0); }
+    }
+
+    .auth-logo {
+        text-align: center;
+        margin-bottom: 32px;
+    }
+
+    .auth-logo .logo-text {
+        font-family: var(--font-display);
+        font-size: 32px;
+        font-weight: 800;
+        letter-spacing: -1px;
+    }
+
+    .auth-logo .logo-text span { color: var(--accent); }
+    .auth-logo p { color: var(--text-muted); font-size: 14px; margin-top: 6px; }
+
+    .auth-form { display: flex; flex-direction: column; gap: 18px; }
+
+    .form-icon-wrap {
+        position: relative;
+    }
+
+    .form-icon-wrap .form-input { padding-left: 42px; }
+
+    .form-icon-wrap .icon {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-muted);
+        font-size: 15px;
+    }
+
+    .auth-divider {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 8px 0;
+        color: var(--text-muted);
+        font-size: 12px;
+    }
+    .auth-divider::before, .auth-divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--border);
+    }
+
+    .auth-footer {
+        text-align: center;
+        margin-top: 20px;
+        font-size: 14px;
+        color: var(--text-muted);
+    }
+
+    .auth-footer a {
+        color: var(--accent-light);
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .toggle-pw {
+        position: absolute;
+        right: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-muted);
+        cursor: pointer;
+        background: none;
+        border: none;
+        padding: 4px;
+    }
+    .toggle-pw:hover { color: var(--text-primary); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-wrap" style="margin-top: -32px;">
+    <div class="auth-card">
+        <div class="auth-logo">
+            <div class="logo-text">So<span>crow</span></div>
+            <p>Masuk ke akun kamu</p>
+        </div>
+
+        <form method="POST" class="auth-form" autocomplete="on">
+            <div class="form-group">
+                <label class="form-label">Username atau Email</label>
+                <div class="form-icon-wrap">
+                    <i class="fa fa-user icon"></i>
+                    <input type="text" name="username" class="form-input"
+                           placeholder="username atau email@kamu.com"
+                           required autocomplete="username">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <div class="form-icon-wrap" style="position:relative;">
+                    <i class="fa fa-lock icon"></i>
+                    <input type="password" name="password" id="pwField" class="form-input"
+                           placeholder="Masukkan password" required autocomplete="current-password">
+                    <button type="button" class="toggle-pw" onclick="togglePw()">
+                        <i class="fa fa-eye" id="eyeIcon"></i>
+                    </button>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-full btn-lg" style="margin-top:4px;">
+                <i class="fa fa-arrow-right-to-bracket"></i> Masuk ke Socrow
+            </button>
+        </form>
+
+        <div class="auth-divider">atau</div>
+
+        <div class="auth-footer">
+            Belum punya akun? <a href="/daftar">Daftar Gratis →</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function togglePw() {
+    const f = document.getElementById('pwField');
+    const icon = document.getElementById('eyeIcon');
+    if (f.type === 'password') {
+        f.type = 'text';
+        icon.className = 'fa fa-eye-slash';
+    } else {
+        f.type = 'password';
+        icon.className = 'fa fa-eye';
+    }
+}
+</script>
+{% endblock %}

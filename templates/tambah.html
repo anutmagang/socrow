@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+{% block title %}Buat Post — Socrow{% endblock %}
+
+{% block head %}
+<style>
+    .create-wrap {
+        max-width: 640px;
+        margin: 0 auto;
+    }
+
+    .create-header {
+        margin-bottom: 28px;
+    }
+
+    .create-header h1 {
+        font-family: var(--font-display);
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+    }
+
+    .create-header p { color: var(--text-muted); margin-top: 6px; }
+
+    .create-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        overflow: hidden;
+        animation: fadeUp 0.4s ease;
+    }
+
+    @keyframes fadeUp {
+        from { opacity:0; transform:translateY(20px); }
+        to   { opacity:1; transform:translateY(0); }
+    }
+
+    .create-form {
+        padding: 32px;
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+    }
+
+    .type-toggle {
+        display: flex;
+        gap: 10px;
+        padding: 4px;
+        background: var(--bg-elevated);
+        border-radius: var(--radius-sm);
+    }
+
+    .type-option {
+        flex: 1;
+        text-align: center;
+        padding: 10px;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: var(--text-muted);
+        user-select: none;
+    }
+
+    .type-option.active {
+        background: var(--bg-card);
+        color: var(--text-primary);
+        box-shadow: var(--shadow-card);
+    }
+
+    .sale-fields {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        padding: 20px;
+        background: rgba(34,211,160,0.04);
+        border: 1px solid rgba(34,211,160,0.12);
+        border-radius: var(--radius-md);
+        animation: fadeUp 0.3s ease;
+    }
+
+    .sale-fields h4 {
+        font-family: var(--font-display);
+        font-size: 14px;
+        color: var(--green);
+        margin-bottom: -4px;
+    }
+
+    .price-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+
+    .upload-zone {
+        border: 2px dashed var(--border);
+        border-radius: var(--radius-md);
+        padding: 32px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: var(--text-muted);
+        position: relative;
+    }
+
+    .upload-zone:hover {
+        border-color: var(--accent);
+        color: var(--accent-light);
+        background: var(--accent-glow);
+    }
+
+    .upload-zone input[type="file"] {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        cursor: pointer;
+    }
+
+    .upload-zone i { font-size: 28px; display: block; margin-bottom: 10px; }
+    .upload-zone strong { display: block; font-size: 15px; margin-bottom: 4px; }
+    .upload-zone small { font-size: 12px; }
+
+    .upload-preview {
+        display: none;
+        position: relative;
+    }
+
+    .upload-preview img, .upload-preview video {
+        width: 100%;
+        max-height: 240px;
+        object-fit: cover;
+        border-radius: var(--radius-sm);
+    }
+
+    .kyc-warning {
+        padding: 16px;
+        background: rgba(245,200,66,0.08);
+        border: 1px solid rgba(245,200,66,0.2);
+        border-radius: var(--radius-md);
+        font-size: 14px;
+        color: var(--yellow);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .submit-area {
+        padding: 20px 32px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+    }
+
+    @media (max-width: 600px) {
+        .price-grid { grid-template-columns: 1fr; }
+        .create-form { padding: 20px; }
+        .submit-area { padding: 16px 20px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="create-wrap">
+    <div class="create-header">
+        <h1>✏️ Buat Post</h1>
+        <p>Bagikan momen atau jual produkmu ke komunitas Socrow.</p>
+    </div>
+
+    <div class="create-card">
+        <form method="POST" enctype="multipart/form-data" class="create-form" id="createForm">
+
+            <!-- TYPE TOGGLE -->
+            <div class="form-group">
+                <label class="form-label">Tipe Post</label>
+                <div class="type-toggle">
+                    <div class="type-option active" id="typePost" onclick="setType('post')">
+                        <i class="fa fa-images" style="margin-right:6px;"></i> Post Biasa
+                    </div>
+                    <div class="type-option" id="typeSell" onclick="setType('sell')">
+                        <i class="fa fa-tag" style="margin-right:6px;"></i> Jual Produk
+                    </div>
+                </div>
+                <input type="hidden" id="isSaleInput" name="is_for_sale">
+            </div>
+
+            <!-- UPLOAD -->
+            <div class="form-group">
+                <label class="form-label">Foto / Video <span style="color:var(--text-muted);">(Opsional)</span></label>
+                <div class="upload-zone" id="uploadZone">
+                    <input type="file" name="media_file" id="mediaInput" accept="image/*,video/mp4"
+                           onchange="previewFile(this)">
+                    <i class="fa fa-cloud-arrow-up"></i>
+                    <strong>Klik atau drag file ke sini</strong>
+                    <small>JPG, PNG, GIF, WEBP, MP4 — maks. 16MB</small>
+                </div>
+                <div class="upload-preview" id="previewArea">
+                    <img id="imgPreview" style="display:none;" alt="Preview">
+                    <video id="vidPreview" style="display:none;" controls></video>
+                    <button type="button" onclick="clearPreview()" style="position:absolute;top:8px;right:8px; background:rgba(0,0,0,0.6); border:none; color:white; width:28px; height:28px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center;"><i class="fa fa-xmark"></i></button>
+                </div>
+            </div>
+
+            <!-- CAPTION -->
+            <div class="form-group">
+                <label class="form-label">Caption / Deskripsi</label>
+                <textarea name="caption" class="form-input" rows="4"
+                    placeholder="Ceritakan sesuatu... atau deskripsikan produkmu" required maxlength="1000"
+                    id="captionField" oninput="updateCount()"></textarea>
+                <div style="text-align:right; font-size:12px; color:var(--text-muted); margin-top:4px;">
+                    <span id="captionCount">0</span>/1000
+                </div>
+            </div>
+
+            <!-- SALE FIELDS -->
+            <div class="sale-fields" id="saleFields" style="display:none;">
+                <h4><i class="fa fa-shield-halved" style="margin-right:6px;"></i> Detail Produk Jualan</h4>
+
+                <div class="kyc-warning" id="kycWarning" style="display:none;">
+                    <i class="fa fa-triangle-exclamation" style="font-size:18px;"></i>
+                    <div>
+                        <strong>Verifikasi KYC diperlukan!</strong><br>
+                        Kamu wajib verifikasi KYC sebelum bisa berjualan.
+                        <a href="/akun" style="color:var(--yellow); font-weight:600;">Verifikasi sekarang →</a>
+                    </div>
+                </div>
+
+                <div class="price-grid">
+                    <div class="form-group">
+                        <label class="form-label">Harga (Rp)</label>
+                        <div style="position:relative;">
+                            <span style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:14px; pointer-events:none;">Rp</span>
+                            <input type="number" name="price" class="form-input" style="padding-left:38px;"
+                                   placeholder="0" min="1000" step="500" id="priceInput"
+                                   oninput="updateFee()">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Stok</label>
+                        <input type="number" name="stock" class="form-input" placeholder="1" min="1" value="1">
+                    </div>
+                </div>
+
+                <div id="feeInfo" style="display:none; padding:12px 16px; background:var(--bg-elevated); border-radius:var(--radius-sm); font-size:13px; color:var(--text-secondary);">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                        <span>Harga jual</span><span id="hargaJual">-</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                        <span>Fee Socrow (2%)</span><span style="color:var(--red);" id="feeAmt">-</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; border-top:1px solid var(--border); padding-top:6px; font-weight:600; color:var(--text-primary);">
+                        <span>Kamu terima</span><span style="color:var(--green);" id="feeNet">-</span>
+                    </div>
+                </div>
+            </div>
+
+        </form>
+
+        <div class="submit-area">
+            <a href="/" class="btn btn-ghost">Batal</a>
+            <button type="submit" form="createForm" class="btn btn-primary">
+                <i class="fa fa-paper-plane"></i> Publikasikan
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let isSale = false;
+
+function setType(type) {
+    isSale = type === 'sell';
+    document.getElementById('isSaleInput').value = isSale ? 'on' : '';
+    document.getElementById('typePost').classList.toggle('active', !isSale);
+    document.getElementById('typeSell').classList.toggle('active', isSale);
+    document.getElementById('saleFields').style.display = isSale ? 'flex' : 'none';
+
+    {% if session.get('kyc_status') == 'none' %}
+    if (isSale) document.getElementById('kycWarning').style.display = 'flex';
+    {% endif %}
+}
+
+function previewFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const zone = document.getElementById('uploadZone');
+    const preview = document.getElementById('previewArea');
+    const img = document.getElementById('imgPreview');
+    const vid = document.getElementById('vidPreview');
+    const url = URL.createObjectURL(file);
+
+    zone.style.display = 'none';
+    preview.style.display = 'block';
+
+    if (file.type.startsWith('video')) {
+        img.style.display = 'none';
+        vid.style.display = 'block';
+        vid.src = url;
+    } else {
+        vid.style.display = 'none';
+        img.style.display = 'block';
+        img.src = url;
+    }
+}
+
+function clearPreview() {
+    document.getElementById('mediaInput').value = '';
+    document.getElementById('uploadZone').style.display = 'block';
+    document.getElementById('previewArea').style.display = 'none';
+}
+
+function updateCount() {
+    const len = document.getElementById('captionField').value.length;
+    document.getElementById('captionCount').textContent = len;
+}
+
+function updateFee() {
+    const price = parseFloat(document.getElementById('priceInput').value) || 0;
+    const feeInfo = document.getElementById('feeInfo');
+    if (price >= 1000) {
+        feeInfo.style.display = 'block';
+        const fee = price * 0.02;
+        const net = price - fee;
+        const fmt = v => 'Rp ' + v.toLocaleString('id-ID');
+        document.getElementById('hargaJual').textContent = fmt(price);
+        document.getElementById('feeAmt').textContent = '- ' + fmt(fee);
+        document.getElementById('feeNet').textContent = fmt(net);
+    } else {
+        feeInfo.style.display = 'none';
+    }
+}
+</script>
+{% endblock %}

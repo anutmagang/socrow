@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Socrow — Jual Beli Aman{% endblock %}</title>
+    <meta name="description" content="Socrow — Platform sosial media dengan rekening bersama (rekber) terpercaya.">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #111118;
+            --bg-card: #16161f;
+            --bg-elevated: #1e1e2a;
+            --border: rgba(255,255,255,0.07);
+            --border-hover: rgba(255,255,255,0.15);
+            --text-primary: #f0f0f5;
+            --text-secondary: #8888a0;
+            --text-muted: #55556a;
+            --accent: #6c63ff;
+            --accent-glow: rgba(108, 99, 255, 0.25);
+            --accent-light: #8b85ff;
+            --green: #22d3a0;
+            --green-glow: rgba(34, 211, 160, 0.2);
+            --yellow: #f5c842;
+            --red: #ff5572;
+            --orange: #ff8c42;
+            --radius-sm: 8px;
+            --radius-md: 14px;
+            --radius-lg: 20px;
+            --radius-xl: 28px;
+            --shadow-card: 0 4px 24px rgba(0,0,0,0.4);
+            --shadow-elevated: 0 8px 40px rgba(0,0,0,0.6);
+            --font-display: 'Syne', sans-serif;
+            --font-body: 'DM Sans', sans-serif;
+            --nav-height: 64px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 15px;
+            line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ── NOISE TEXTURE OVERLAY ── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.4;
+        }
+
+        /* ── AMBIENT GLOW ── */
+        body::after {
+            content: '';
+            position: fixed;
+            top: -20%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80vw;
+            height: 60vh;
+            background: radial-gradient(ellipse, rgba(108,99,255,0.06) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ── NAVBAR ── */
+        .navbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            height: var(--nav-height);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            background: rgba(10, 10, 15, 0.85);
+            backdrop-filter: blur(20px) saturate(1.5);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .navbar-inner {
+            max-width: 1100px;
+            width: 100%;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-logo {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 22px;
+            color: var(--text-primary);
+            text-decoration: none;
+            letter-spacing: -0.5px;
+            margin-right: auto;
+        }
+
+        .nav-logo span {
+            color: var(--accent);
+        }
+
+        .nav-btn {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-body);
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-secondary);
+            background: transparent;
+            white-space: nowrap;
+        }
+
+        .nav-btn:hover {
+            color: var(--text-primary);
+            background: var(--bg-elevated);
+        }
+
+        .nav-btn.active {
+            color: var(--text-primary);
+        }
+
+        .nav-btn-primary {
+            background: var(--accent);
+            color: #fff !important;
+            font-weight: 600;
+        }
+
+        .nav-btn-primary:hover {
+            background: var(--accent-light);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px var(--accent-glow);
+        }
+
+        .notif-badge {
+            background: var(--red);
+            color: white;
+            font-size: 10px;
+            font-weight: 700;
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin-left: -6px; margin-top: -12px;
+        }
+
+        /* ── MAIN LAYOUT ── */
+        .main-wrap {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 32px 24px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ── CARDS ── */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            border-color: var(--border-hover);
+        }
+
+        /* ── BUTTONS ── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-body);
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+            box-shadow: 0 0 0 0 var(--accent-glow);
+        }
+        .btn-primary:hover {
+            background: var(--accent-light);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--accent-glow);
+        }
+
+        .btn-success {
+            background: var(--green);
+            color: #0a1a14;
+        }
+        .btn-success:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background: var(--red);
+            color: #fff;
+        }
+        .btn-danger:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+        .btn-ghost {
+            background: var(--bg-elevated);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+        .btn-ghost:hover {
+            color: var(--text-primary);
+            border-color: var(--border-hover);
+        }
+
+        .btn-sm { padding: 7px 14px; font-size: 13px; }
+        .btn-lg { padding: 14px 28px; font-size: 16px; border-radius: var(--radius-md); }
+        .btn-full { width: 100%; justify-content: center; }
+
+        /* ── FORMS ── */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-input {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 15px;
+            padding: 12px 16px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+            width: 100%;
+        }
+
+        .form-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .form-input::placeholder { color: var(--text-muted); }
+
+        textarea.form-input { resize: vertical; min-height: 80px; }
+
+        /* ── BADGES / TAGS ── */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 100px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-verified { background: rgba(34,211,160,0.12); color: var(--green); }
+        .badge-pending  { background: rgba(245,200,66,0.12);  color: var(--yellow); }
+        .badge-danger   { background: rgba(255,85,114,0.12);   color: var(--red); }
+        .badge-accent   { background: rgba(108,99,255,0.15);   color: var(--accent-light); }
+
+        /* ── STATUS REKBER ── */
+        .status-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 5px 12px; border-radius: 100px;
+            font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .status-menunggu_pembayaran { background: rgba(245,200,66,0.12); color: var(--yellow); }
+        .status-dibayar       { background: rgba(108,99,255,0.15); color: var(--accent-light); }
+        .status-selesai       { background: rgba(34,211,160,0.12); color: var(--green); }
+        .status-komplain      { background: rgba(255,85,114,0.12); color: var(--red); }
+
+        /* ── FLASH MESSAGES ── */
+        .flash-container {
+            position: fixed;
+            top: calc(var(--nav-height) + 16px);
+            right: 16px;
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-width: 360px;
+        }
+
+        .flash-msg {
+            padding: 14px 18px;
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid;
+            backdrop-filter: blur(10px);
+            animation: slideIn 0.3s ease, fadeOut 0.4s ease 4.5s forwards;
+            cursor: pointer;
+        }
+
+        .flash-success { background: rgba(34,211,160,0.12); border-color: rgba(34,211,160,0.3); color: var(--green); }
+        .flash-danger  { background: rgba(255,85,114,0.12);  border-color: rgba(255,85,114,0.3);  color: var(--red); }
+        .flash-warning { background: rgba(245,200,66,0.12);  border-color: rgba(245,200,66,0.3);  color: var(--yellow); }
+        .flash-info    { background: rgba(108,99,255,0.12);  border-color: rgba(108,99,255,0.3);  color: var(--accent-light); }
+
+        @keyframes slideIn {
+            from { transform: translateX(120%); opacity: 0; }
+            to   { transform: translateX(0);   opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to   { opacity: 0; pointer-events: none; }
+        }
+
+        /* ── DIVIDER ── */
+        .divider {
+            height: 1px;
+            background: var(--border);
+            margin: 20px 0;
+        }
+
+        /* ── AVATAR ── */
+        .avatar {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), var(--green));
+            display: flex; align-items: center; justify-content: center;
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 15px;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        /* ── EMPTY STATE ── */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; display: block; opacity: 0.4; }
+        .empty-state h3 { font-family: var(--font-display); font-size: 18px; margin-bottom: 8px; color: var(--text-secondary); }
+
+        /* ── SECTION TITLE ── */
+        .section-title {
+            font-family: var(--font-display);
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            letter-spacing: -0.3px;
+        }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 768px) {
+            .main-wrap { padding: 20px 16px; }
+            .navbar { padding: 0 16px; }
+            .nav-btn span { display: none; }
+        }
+    </style>
+
+    {% block head %}{% endblock %}
+</head>
+<body>
+
+<!-- ── FLASH MESSAGES ── -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div class="flash-container" id="flashContainer">
+    {% for category, message in messages %}
+    <div class="flash-msg flash-{{ category }}" onclick="this.remove()">
+        {% if category == 'success' %}<i class="fa fa-check-circle"></i>
+        {% elif category == 'danger' %}<i class="fa fa-exclamation-circle"></i>
+        {% elif category == 'warning' %}<i class="fa fa-triangle-exclamation"></i>
+        {% else %}<i class="fa fa-info-circle"></i>{% endif %}
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+<!-- ── NAVBAR ── -->
+<nav class="navbar">
+    <div class="navbar-inner">
+        <a href="/" class="nav-logo">So<span>crow</span></a>
+
+        {% if session.user_id %}
+            <a href="/" class="nav-btn"><i class="fa fa-house"></i> <span>Beranda</span></a>
+            <a href="/tambah" class="nav-btn"><i class="fa fa-plus-circle"></i> <span>Post</span></a>
+            <a href="/dasbor" class="nav-btn"><i class="fa fa-shield-halved"></i> <span>Rekber</span></a>
+            <a href="/notifikasi" class="nav-btn" style="position:relative">
+                <i class="fa fa-bell"></i>
+                {% set nc = get_notif_count() %}
+                {% if nc > 0 %}<span class="notif-badge">{{ nc }}</span>{% endif %}
+            </a>
+            <a href="/akun" class="nav-btn nav-btn-primary"><i class="fa fa-user"></i> <span>{{ session.username }}</span></a>
+        {% else %}
+            <a href="/login" class="nav-btn">Masuk</a>
+            <a href="/daftar" class="nav-btn nav-btn-primary">Daftar Gratis</a>
+        {% endif %}
+    </div>
+</nav>
+
+<!-- ── CONTENT ── -->
+<div class="main-wrap">
+    {% block content %}{% endblock %}
+</div>
+
+<!-- ── FOOTER ── -->
+<footer style="border-top:1px solid var(--border); margin-top:60px; padding:32px 24px; text-align:center; color:var(--text-muted); font-size:13px; position:relative; z-index:1;">
+    <div style="max-width:1100px; margin:0 auto; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px;">
+        <span>© 2026 <strong style="color:var(--text-secondary)">Socrow</strong> — Jual Beli Aman, Terpercaya</span>
+        <div style="display:flex; gap:20px;">
+            <a href="/syarat-ketentuan" style="color:var(--text-muted); text-decoration:none;" onmouseover="this.style.color='var(--text-secondary)'" onmouseout="this.style.color='var(--text-muted)'">Syarat & Ketentuan</a>
+            <a href="/tentang" style="color:var(--text-muted); text-decoration:none;" onmouseover="this.style.color='var(--text-secondary)'" onmouseout="this.style.color='var(--text-muted)'">Tentang Kami</a>
+        </div>
+    </div>
+</footer>
+
+<script>
+    // Auto-remove flash messages
+    setTimeout(() => {
+        const fc = document.getElementById('flashContainer');
+        if (fc) fc.remove();
+    }, 5000);
+</script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

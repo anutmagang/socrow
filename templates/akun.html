@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+{% block title %}Akun — Socrow{% endblock %}
+
+{% block head %}
+<style>
+    .akun-grid {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 24px;
+        align-items: start;
+    }
+
+    @media (max-width: 860px) {
+        .akun-grid { grid-template-columns: 1fr; }
+    }
+
+    .profile-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 28px;
+        text-align: center;
+    }
+
+    .profile-avatar {
+        width: 80px; height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--accent), var(--green));
+        display: flex; align-items: center; justify-content: center;
+        font-family: var(--font-display);
+        font-weight: 800;
+        font-size: 32px;
+        color: white;
+        margin: 0 auto 16px;
+        box-shadow: 0 8px 24px rgba(108,99,255,0.3);
+    }
+
+    .profile-name {
+        font-family: var(--font-display);
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 4px;
+    }
+
+    .profile-email { font-size:13px; color:var(--text-muted); margin-bottom:16px; }
+
+    .profile-stat {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .stat-box {
+        background: var(--bg-elevated);
+        border-radius: var(--radius-sm);
+        padding: 12px;
+        text-align: center;
+    }
+
+    .stat-box strong {
+        display: block;
+        font-family: var(--font-display);
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .stat-box small { font-size: 11px; color: var(--text-muted); }
+
+    /* TABS */
+    .tab-list {
+        display: flex;
+        gap: 4px;
+        border-bottom: 2px solid var(--border);
+        margin-bottom: 24px;
+        overflow-x: auto;
+    }
+
+    .tab-btn {
+        padding: 10px 18px;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-muted);
+        background: none;
+        border: none;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -2px;
+        font-family: var(--font-body);
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+
+    .tab-btn.active {
+        color: var(--accent-light);
+        border-bottom-color: var(--accent);
+    }
+
+    .tab-btn:hover:not(.active) { color: var(--text-primary); }
+
+    .tab-panel { display: none; animation: fadeUp 0.3s ease; }
+    .tab-panel.active { display: block; }
+
+    @keyframes fadeUp {
+        from { opacity:0; transform:translateY(8px); }
+        to   { opacity:1; transform:translateY(0); }
+    }
+
+    .settings-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 28px;
+    }
+
+    .settings-card h3 {
+        font-family: var(--font-display);
+        font-size: 17px;
+        font-weight: 700;
+        margin-bottom: 20px;
+    }
+
+    .settings-form { display: flex; flex-direction: column; gap: 18px; }
+
+    .saldo-display {
+        background: linear-gradient(135deg, rgba(34,211,160,0.1), rgba(108,99,255,0.06));
+        border: 1px solid rgba(34,211,160,0.2);
+        border-radius: var(--radius-md);
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .saldo-display .saldo-label { font-size:13px; color:var(--text-muted); margin-bottom:4px; }
+    .saldo-display .saldo-val {
+        font-family: var(--font-display);
+        font-size: 32px;
+        font-weight: 800;
+        color: var(--green);
+        letter-spacing: -1px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="akun-grid">
+    <!-- PROFILE SIDEBAR -->
+    <div>
+        <div class="profile-card">
+            <div class="profile-avatar">{{ user.username[0].upper() }}</div>
+            <div class="profile-name">{{ user.username }}</div>
+            <div class="profile-email">{{ user.email }}</div>
+
+            {% if user.kyc_status == 'verified' %}
+            <span class="badge badge-verified"><i class="fa fa-check"></i> Terverifikasi</span>
+            {% elif user.kyc_status == 'pending' %}
+            <span class="badge badge-pending"><i class="fa fa-clock"></i> Menunggu Verifikasi</span>
+            {% else %}
+            <span class="badge badge-danger"><i class="fa fa-circle-exclamation"></i> Belum Terverifikasi</span>
+            {% endif %}
+
+            <div class="profile-stat">
+                <div class="stat-box">
+                    <strong>{{ user.total_sales }}</strong>
+                    <small>Transaksi</small>
+                </div>
+                <div class="stat-box">
+                    <strong style="font-size:16px; color:var(--green);">{{ user.saldo | rupiah }}</strong>
+                    <small>Saldo</small>
+                </div>
+            </div>
+        </div>
+
+        {% if session.email == admin_email %}
+        <div style="margin-top:14px; padding:16px 20px; background:rgba(255,85,114,0.06); border:1px solid rgba(255,85,114,0.15); border-radius:var(--radius-md);">
+            <div style="font-size:13px; color:var(--text-muted); margin-bottom:4px;">Revenue Platform</div>
+            <div style="font-family:var(--font-display); font-size:22px; font-weight:800; color:var(--red);">{{ platform_revenue | rupiah }}</div>
+            <a href="/admin/kyc" class="btn btn-danger btn-sm btn-full" style="margin-top:12px;"><i class="fa fa-user-shield"></i> Panel Admin KYC</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- TABS SECTION -->
+    <div>
+        <div class="tab-list">
+            <button class="tab-btn active" onclick="switchTab('kyc')"><i class="fa fa-id-card" style="margin-right:6px;"></i>Verifikasi KYC</button>
+            <button class="tab-btn" onclick="switchTab('password')"><i class="fa fa-lock" style="margin-right:6px;"></i>Ubah Password</button>
+            <button class="tab-btn" onclick="switchTab('saldo')"><i class="fa fa-wallet" style="margin-right:6px;"></i>Saldo</button>
+        </div>
+
+        <!-- KYC TAB -->
+        <div class="tab-panel active" id="tab-kyc">
+            <div class="settings-card">
+                <h3>🪪 Verifikasi Identitas (KYC)</h3>
+                <p style="font-size:14px; color:var(--text-muted); margin-bottom:24px;">
+                    Verifikasi diperlukan untuk mulai berjualan di Socrow. Upload KTP dan selfie kamu.
+                </p>
+
+                {% if user.kyc_status == 'verified' %}
+                <div style="padding:20px; background:rgba(34,211,160,0.08); border:1px solid rgba(34,211,160,0.2); border-radius:var(--radius-md); text-align:center;">
+                    <i class="fa fa-shield-check" style="font-size:40px; color:var(--green); display:block; margin-bottom:12px;"></i>
+                    <strong style="font-size:16px; color:var(--green);">Akun Terverifikasi!</strong>
+                    <p style="font-size:14px; color:var(--text-muted); margin-top:8px;">
+                        Atas nama: <strong>{{ user.kyc_name }}</strong><br>
+                        Toko: {{ user.store_name or '-' }}
+                    </p>
+                </div>
+                {% elif user.kyc_status == 'pending' %}
+                <div style="padding:20px; background:rgba(245,200,66,0.08); border:1px solid rgba(245,200,66,0.2); border-radius:var(--radius-md); text-align:center;">
+                    <i class="fa fa-hourglass-half" style="font-size:40px; color:var(--yellow); display:block; margin-bottom:12px;"></i>
+                    <strong style="color:var(--yellow);">Sedang Ditinjau</strong>
+                    <p style="font-size:14px; color:var(--text-muted); margin-top:8px;">
+                        Data KYC kamu sedang diverifikasi oleh tim Socrow. Proses 1-2 hari kerja.
+                    </p>
+                </div>
+                {% else %}
+                <form method="POST" enctype="multipart/form-data" class="settings-form">
+                    <input type="hidden" name="form_type" value="finance">
+                    <div class="form-group">
+                        <label class="form-label">Nama Lengkap (sesuai KTP)</label>
+                        <input type="text" name="kyc_name" class="form-input" placeholder="NAMA LENGKAP" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nama Toko / Brand</label>
+                        <input type="text" name="store_name" class="form-input" placeholder="Nama toko kamu">
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                        <div class="form-group">
+                            <label class="form-label">Nama Bank</label>
+                            <select name="bank_name" class="form-input" required>
+                                <option value="">Pilih Bank</option>
+                                {% for bank in ['BCA', 'BNI', 'BRI', 'Mandiri', 'CIMB', 'Danamon', 'BSI', 'Jenius', 'OVO', 'GoPay', 'Dana'] %}
+                                <option>{{ bank }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Nomor Rekening</label>
+                            <input type="text" name="bank_account" class="form-input" placeholder="081234567890" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Foto KTP</label>
+                        <input type="file" name="file_ktp" class="form-input" accept="image/*" required style="padding:10px;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Foto Selfie + KTP</label>
+                        <input type="file" name="file_selfie" class="form-input" accept="image/*" required style="padding:10px;">
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="fa fa-upload"></i> Kirim Verifikasi</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- PASSWORD TAB -->
+        <div class="tab-panel" id="tab-password">
+            <div class="settings-card">
+                <h3>🔐 Ubah Password</h3>
+                <form method="POST" class="settings-form">
+                    <input type="hidden" name="form_type" value="password">
+                    <div class="form-group">
+                        <label class="form-label">Password Lama</label>
+                        <input type="password" name="old_password" class="form-input" placeholder="Password saat ini" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password Baru</label>
+                        <input type="password" name="new_password" class="form-input" placeholder="Min. 8 karakter" required minlength="8">
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Simpan Password</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- SALDO TAB -->
+        <div class="tab-panel" id="tab-saldo">
+            <div class="settings-card">
+                <h3>💰 Saldo & Penarikan</h3>
+                <div class="saldo-display">
+                    <div class="saldo-label">Saldo tersedia</div>
+                    <div class="saldo-val">{{ user.saldo | rupiah }}</div>
+                </div>
+                {% if user.bank_account %}
+                <div style="padding:16px; background:var(--bg-elevated); border-radius:var(--radius-sm); font-size:14px; margin-bottom:16px;">
+                    <div style="color:var(--text-muted); margin-bottom:6px;">Rekening Terdaftar</div>
+                    <div><strong>{{ user.bank_name }}</strong> — {{ user.bank_account }}</div>
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">a/n {{ user.kyc_name }}</div>
+                </div>
+                <p style="font-size:13px; color:var(--text-muted);">
+                    Fitur penarikan manual akan segera hadir. Saldo otomatis ditransfer saat transaksi selesai.
+                </p>
+                {% else %}
+                <p style="font-size:14px; color:var(--text-muted);">
+                    Lengkapi data bank di tab KYC untuk menerima pembayaran.
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function switchTab(id) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + id).classList.add('active');
+    event.target.classList.add('active');
+}
+</script>
+{% endblock %}

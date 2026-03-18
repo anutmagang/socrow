@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Admin KYC — Socrow{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:28px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+    <div>
+        <h1 style="font-family:var(--font-display); font-size:26px; font-weight:800;">👑 Panel Admin — KYC</h1>
+        <p style="color:var(--text-muted);">Tinjau dan verifikasi data identitas pengguna.</p>
+    </div>
+    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <div style="padding:12px 20px; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-md); text-align:center;">
+            <div style="font-family:var(--font-display); font-size:22px; font-weight:700;">{{ total_users }}</div>
+            <div style="font-size:12px; color:var(--text-muted);">Total User</div>
+        </div>
+        <div style="padding:12px 20px; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-md); text-align:center;">
+            <div style="font-family:var(--font-display); font-size:22px; font-weight:700;">{{ total_txn }}</div>
+            <div style="font-size:12px; color:var(--text-muted);">Total Transaksi</div>
+        </div>
+        <div style="padding:12px 20px; background:rgba(34,211,160,0.08); border:1px solid rgba(34,211,160,0.2); border-radius:var(--radius-md); text-align:center;">
+            <div style="font-family:var(--font-display); font-size:22px; font-weight:700; color:var(--green);">{{ stats.total_revenue | rupiah }}</div>
+            <div style="font-size:12px; color:var(--text-muted);">Revenue Platform</div>
+        </div>
+    </div>
+</div>
+
+{% if users %}
+<div style="display:flex; flex-direction:column; gap:16px;">
+    {% for u in users %}
+    <div style="background:var(--bg-card); border:1px solid rgba(245,200,66,0.2); border-radius:var(--radius-lg); padding:24px; display:grid; grid-template-columns:1fr auto; gap:20px; align-items:start;">
+        <div>
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+                <div class="avatar">{{ u.username[0].upper() }}</div>
+                <div>
+                    <div style="font-weight:700; font-size:16px;">{{ u.username }}</div>
+                    <div style="font-size:13px; color:var(--text-muted);">{{ u.email }}</div>
+                </div>
+                <span class="badge badge-pending" style="margin-left:auto;"><i class="fa fa-clock"></i> Pending</span>
+            </div>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:10px; margin-bottom:14px;">
+                {% for label, val in [('Nama KTP', u.kyc_name), ('Nama Toko', u.store_name), ('Bank', u.bank_name), ('Rekening', u.bank_account)] %}
+                <div style="padding:10px 14px; background:var(--bg-elevated); border-radius:var(--radius-sm);">
+                    <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px;">{{ label }}</div>
+                    <div style="font-size:14px; font-weight:600;">{{ val or '-' }}</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                {% if u.file_ktp %}
+                <a href="/static/uploads/{{ u.file_ktp }}" target="_blank" class="btn btn-ghost btn-sm">
+                    <i class="fa fa-id-card"></i> Lihat KTP
+                </a>
+                {% endif %}
+                {% if u.file_selfie %}
+                <a href="/static/uploads/{{ u.file_selfie }}" target="_blank" class="btn btn-ghost btn-sm">
+                    <i class="fa fa-camera"></i> Lihat Selfie
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:10px; min-width:140px;">
+            <a href="/admin/verify/{{ u.id }}/approve" class="btn btn-success btn-sm btn-full"
+               onclick="return confirm('Setujui KYC untuk {{ u.username }}?')">
+                <i class="fa fa-check"></i> Setujui
+            </a>
+            <a href="/admin/verify/{{ u.id }}/reject" class="btn btn-danger btn-sm btn-full"
+               onclick="return confirm('Tolak KYC untuk {{ u.username }}?')">
+                <i class="fa fa-xmark"></i> Tolak
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card empty-state">
+    <i class="fa fa-check-circle"></i>
+    <h3>Tidak ada pengajuan KYC</h3>
+    <p>Semua pengajuan telah ditinjau.</p>
+</div>
+{% endif %}
+{% endblock %}

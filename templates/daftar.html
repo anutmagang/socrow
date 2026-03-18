@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}Daftar — Socrow{% endblock %}
+
+{% block head %}
+<style>
+    .auth-wrap {
+        min-height: calc(100vh - var(--nav-height));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 16px;
+    }
+    .auth-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        padding: 44px 40px;
+        width: 100%;
+        max-width: 460px;
+        animation: fadeUp 0.4s ease;
+        box-shadow: var(--shadow-elevated);
+    }
+    @keyframes fadeUp {
+        from { opacity:0; transform:translateY(24px); }
+        to   { opacity:1; transform:translateY(0); }
+    }
+    .auth-logo { text-align:center; margin-bottom:28px; }
+    .auth-logo .logo-text { font-family:var(--font-display); font-size:32px; font-weight:800; letter-spacing:-1px; }
+    .auth-logo .logo-text span { color: var(--accent); }
+    .auth-logo p { color:var(--text-muted); font-size:14px; margin-top:6px; }
+    .auth-form { display:flex; flex-direction:column; gap:16px; }
+    .form-icon-wrap { position:relative; }
+    .form-icon-wrap .form-input { padding-left:42px; }
+    .form-icon-wrap .icon { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:15px; }
+    .pw-strength { height:4px; border-radius:2px; margin-top:6px; transition:all 0.3s; background:var(--border); }
+    .pw-hint { font-size:12px; color:var(--text-muted); margin-top:4px; }
+    .terms-check { display:flex; align-items:flex-start; gap:10px; font-size:13px; color:var(--text-secondary); cursor:pointer; }
+    .terms-check input[type=checkbox] { margin-top:2px; accent-color:var(--accent); width:16px; height:16px; flex-shrink:0; }
+    .terms-check a { color:var(--accent-light); text-decoration:none; }
+    .auth-footer { text-align:center; margin-top:20px; font-size:14px; color:var(--text-muted); }
+    .auth-footer a { color:var(--accent-light); text-decoration:none; font-weight:600; }
+    .toggle-pw { position:absolute; right:14px; top:50%; transform:translateY(-50%); color:var(--text-muted); cursor:pointer; background:none; border:none; padding:4px; }
+    .toggle-pw:hover { color:var(--text-primary); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-wrap" style="margin-top: -32px;">
+    <div class="auth-card">
+        <div class="auth-logo">
+            <div class="logo-text">So<span>crow</span></div>
+            <p>Buat akun gratis — hanya butuh 1 menit</p>
+        </div>
+
+        <form method="POST" class="auth-form" id="regForm">
+            <div class="form-group">
+                <label class="form-label">Username</label>
+                <div class="form-icon-wrap">
+                    <i class="fa fa-at icon"></i>
+                    <input type="text" name="username" class="form-input"
+                           placeholder="username_kamu" required minlength="3"
+                           pattern="[a-zA-Z0-9_]+" title="Hanya huruf, angka, dan underscore"
+                           autocomplete="username">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <div class="form-icon-wrap">
+                    <i class="fa fa-envelope icon"></i>
+                    <input type="email" name="email" class="form-input"
+                           placeholder="email@kamu.com" required autocomplete="email">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Nomor Telepon</label>
+                <div class="form-icon-wrap">
+                    <i class="fa fa-phone icon"></i>
+                    <input type="tel" name="phone" class="form-input"
+                           placeholder="08xxxxxxxxxx" autocomplete="tel">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <div class="form-icon-wrap" style="position:relative;">
+                    <i class="fa fa-lock icon"></i>
+                    <input type="password" name="password" id="pwField" class="form-input"
+                           placeholder="Min. 8 karakter, huruf + angka"
+                           required minlength="8" oninput="checkStrength(this.value)"
+                           autocomplete="new-password">
+                    <button type="button" class="toggle-pw" onclick="togglePw('pwField','eye1')">
+                        <i class="fa fa-eye" id="eye1"></i>
+                    </button>
+                </div>
+                <div class="pw-strength" id="pwStrength"></div>
+                <div class="pw-hint" id="pwHint">Minimal 8 karakter, mengandung huruf dan angka</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Konfirmasi Password</label>
+                <div class="form-icon-wrap" style="position:relative;">
+                    <i class="fa fa-lock icon"></i>
+                    <input type="password" name="confirm_password" id="pw2Field" class="form-input"
+                           placeholder="Ulangi password" required autocomplete="new-password">
+                    <button type="button" class="toggle-pw" onclick="togglePw('pw2Field','eye2')">
+                        <i class="fa fa-eye" id="eye2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <label class="terms-check">
+                <input type="checkbox" required>
+                <span>Saya menyetujui <a href="/syarat-ketentuan" target="_blank">Syarat & Ketentuan</a> Socrow</span>
+            </label>
+
+            <button type="submit" class="btn btn-primary btn-full btn-lg" style="margin-top:4px;">
+                <i class="fa fa-user-plus"></i> Buat Akun Gratis
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            Sudah punya akun? <a href="/login">Masuk →</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function togglePw(fieldId, iconId) {
+    const f = document.getElementById(fieldId);
+    const i = document.getElementById(iconId);
+    f.type = f.type === 'password' ? 'text' : 'password';
+    i.className = f.type === 'password' ? 'fa fa-eye' : 'fa fa-eye-slash';
+}
+
+function checkStrength(pw) {
+    const bar = document.getElementById('pwStrength');
+    const hint = document.getElementById('pwHint');
+    let score = 0;
+    if (pw.length >= 8) score++;
+    if (/[A-Z]/.test(pw)) score++;
+    if (/[0-9]/.test(pw)) score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+
+    const levels = [
+        { color: 'var(--red)',    w: '25%', text: 'Lemah' },
+        { color: 'var(--orange)', w: '50%', text: 'Cukup' },
+        { color: 'var(--yellow)', w: '75%', text: 'Kuat' },
+        { color: 'var(--green)',  w: '100%',text: 'Sangat Kuat ✓' },
+    ];
+    if (pw.length === 0) { bar.style.width = '0'; hint.textContent = 'Minimal 8 karakter, huruf + angka'; return; }
+    const l = levels[Math.max(0, score - 1)];
+    bar.style.background = l.color;
+    bar.style.width = l.w;
+    hint.textContent = `Kekuatan: ${l.text}`;
+    hint.style.color = l.color;
+}
+</script>
+{% endblock %}

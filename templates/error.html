@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Error {{ code }} — Socrow{% endblock %}
+{% block content %}
+<div style="text-align:center; padding:80px 20px;">
+    <div style="font-family:var(--font-display); font-size:100px; font-weight:800; color:var(--border); line-height:1;">{{ code }}</div>
+    <h2 style="font-family:var(--font-display); font-size:24px; margin-bottom:12px;">{{ message }}</h2>
+    <p style="color:var(--text-muted); margin-bottom:28px;">Halaman yang kamu cari tidak tersedia.</p>
+    <a href="/" class="btn btn-primary"><i class="fa fa-house"></i> Kembali ke Beranda</a>
+</div>
+{% endblock %}
