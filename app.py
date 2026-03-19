@@ -11,7 +11,6 @@ from flask import Flask, render_template, request, redirect, session, jsonify, f
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from flask_seasurf import SeaSurf
 from flask_talisman import Talisman
 from werkzeug.security import generate_password_hash, check_password_hash
 from argon2 import PasswordHasher
@@ -23,7 +22,7 @@ import io
 from werkzeug.utils import secure_filename
 from functools import wraps
 from datetime import datetime, timedelta
-import sqlite3, os, random, string, re, json, logging, uuid
+import sqlite3, os, random, string, re, json, logging, uuid, hmac, secrets
 import magic
 from PIL import Image
 
@@ -68,13 +67,13 @@ csp = {
 talisman = Talisman(app, content_security_policy=csp, force_https=FORCE_HTTPS)
 _cors_raw = os.environ.get('CORS_ALLOWED_ORIGINS', '').strip()
 _cors_list = [o.strip() for o in _cors_raw.split(',') if o.strip()] if _cors_raw else None
-socketio = SocketIO(app, cors_allowed_origins=_cors_list, async_mode='eventlet')
-csrf = SeaSurf(app)
+REDIS_URL = os.environ.get('REDIS_URL', '').strip() or None
+socketio = SocketIO(app, cors_allowed_origins=_cors_list, async_mode='eventlet', message_queue=REDIS_URL)
 limiter = Limiter(
     get_remote_address,
     app=app,
     default_limits=["200 per day", "50 per hour"],
-    storage_uri="memory://",
+    storage_uri=REDIS_URL or "memory://",
 )
 
 UPLOAD_FOLDER   = 'static/uploads'
@@ -82,6 +81,7 @@ ALLOWED_EXT     = {'png','jpg','jpeg','gif','webp','mp4','pdf'}
 MAX_UPLOAD_MB   = 16
 ADMIN_EMAIL     = os.environ.get('ADMIN_EMAIL', 'admin@socrow.com')
 BASE_URL        = os.environ.get('BASE_URL', 'http://127.0.0.1:5000')
+DATABASE_URL    = os.environ.get('DATABASE_URL', '').strip()
 APP_NAME        = 'Socrow'
 FEE_PERSEN      = 0.015          # 1.5% ke platform
 FEE_AFILIASI    = 0.005          # 0.5% ke afiliator
@@ -124,6 +124,35 @@ def update_last_seen():
             conn.commit(); conn.close()
         except: pass
 
+def csrf_token():
+    tok = session.get('_csrf_token')
+    if not tok:
+        tok = secrets.token_urlsafe(32)
+        session['_csrf_token'] = tok
+    return tok
+
+@app.before_request
+def enforce_csrf():
+    if request.method in ('GET', 'HEAD', 'OPTIONS'):
+        return
+    p = request.path or ''
+    if p.startswith('/socket.io'):
+        return
+    if p == '/xendit_webhook':
+        return
+    sent = request.headers.get('X-CSRFToken')
+    if not sent:
+        sent = request.form.get('_csrf_token') if request.form else None
+    if not sent:
+        try:
+            j = request.get_json(silent=True) or {}
+            sent = j.get('_csrf_token')
+        except Exception:
+            sent = None
+    tok = session.get('_csrf_token') or ''
+    if not sent or not tok or not hmac.compare_digest(str(sent), str(tok)):
+        abort(403)
+
 @app.after_request
 def add_security_headers(resp):
     resp.headers['X-Content-Type-Options'] = 'nosniff'
@@ -132,12 +161,76 @@ def add_security_headers(resp):
     return resp
 
 # ─── HELPERS ────────────────────────────────────────────────────────────────
+class _DummyCursor:
+    def fetchone(self): return None
+    def fetchall(self): return []
+
+class _HybridRow(dict):
+    def __init__(self, cols, row):
+        super().__init__(zip(cols, row))
+        self._row = row
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return self._row[key]
+        return super().__getitem__(key)
+
+def _psycopg_hybrid_row(cursor, row):
+    cols = [d.name for d in (cursor.description or [])]
+    return _HybridRow(cols, row)
+
+def _adapt_sql_for_postgres(sql):
+    s = sql.strip()
+    up = s.upper()
+    if up.startswith("PRAGMA "):
+        return None
+    if up.startswith("BEGIN IMMEDIATE"):
+        return "BEGIN"
+    if "LAST_INSERT_ROWID()" in up:
+        return "SELECT LASTVAL()"
+    if up.startswith("INSERT OR IGNORE INTO"):
+        s2 = re.sub(r'(?i)^INSERT OR IGNORE INTO', 'INSERT INTO', s)
+        if "ON CONFLICT" not in s2.upper():
+            s2 = s2.rstrip().rstrip(';') + " ON CONFLICT DO NOTHING"
+        s = s2
+    return s.replace("?", "%s")
+
+class _CompatConn:
+    def __init__(self, conn, backend):
+        self._conn = conn
+        self._backend = backend
+    def execute(self, sql, params=None):
+        if self._backend == "postgres":
+            sql = _adapt_sql_for_postgres(sql)
+            if sql is None:
+                return _DummyCursor()
+            if params is None:
+                return self._conn.execute(sql)
+            return self._conn.execute(sql, params)
+        if params is None:
+            return self._conn.execute(sql)
+        return self._conn.execute(sql, params)
+    def commit(self): return self._conn.commit()
+    def rollback(self): return self._conn.rollback()
+    def close(self): return self._conn.close()
+
 def get_db():
-    conn = sqlite3.connect('sosmed_rekber.db')
+    if DATABASE_URL and (DATABASE_URL.startswith("postgresql://") or DATABASE_URL.startswith("postgres://")):
+        try:
+            import psycopg
+        except Exception as e:
+            raise RuntimeError("psycopg is required for PostgreSQL") from e
+        conn = psycopg.connect(DATABASE_URL, row_factory=_psycopg_hybrid_row)
+        return _CompatConn(conn, "postgres")
+
+    db_path = 'sosmed_rekber.db'
+    if DATABASE_URL.startswith("sqlite:///"):
+        db_path = DATABASE_URL.replace("sqlite:///", "")
+    conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
-    return conn
+    conn.execute("PRAGMA busy_timeout=5000")
+    return _CompatConn(conn, "sqlite")
 
 def allowed_file(file_obj):
     if not file_obj or not file_obj.filename: return False
@@ -205,7 +298,7 @@ def audit(action, detail=None, user_id=None):
 def notif(user_id, title, message, link='/', ntype='info'):
     try:
         conn = get_db()
-        conn.execute("INSERT INTO notifications(user_id,title,message,notif_type,link) VALUES(?,?,?,?,?)",
+        conn.execute("INSERT INTO notifications(user_id,title,message,type,link) VALUES(?,?,?,?,?)",
                      (user_id, title, message, ntype, link))
         conn.commit(); conn.close()
         # Broadcast real-time
@@ -300,7 +393,7 @@ def get_seller_badge(user_id):
 app.jinja_env.filters['hashtags'] = hashtag_link
 app.jinja_env.filters['rupiah'] = rupiah
 app.jinja_env.globals.update(get_notif_count=get_notif_count, is_online=is_online, get_seller_badge=get_seller_badge,
-                             app_name=APP_NAME, admin_email=ADMIN_EMAIL, now=datetime.now)
+                             app_name=APP_NAME, admin_email=ADMIN_EMAIL, now=datetime.now, csrf_token=csrf_token)
 
 # ─── DECORATORS ─────────────────────────────────────────────────────────────
 def login_required(f):

@@ -1,14 +1,53 @@
 import sqlite3
 import os
+import re
+
+DATABASE_URL = os.environ.get('DATABASE_URL', '').strip()
+_IS_PG = DATABASE_URL.startswith('postgresql://') or DATABASE_URL.startswith('postgres://')
+
+def _adapt_sql_for_postgres(sql: str) -> str:
+    s = sql.strip()
+    s = s.replace("INTEGER PRIMARY KEY AUTOINCREMENT", "BIGSERIAL PRIMARY KEY")
+    s = re.sub(r'(?i)\bREAL\b', 'DOUBLE PRECISION', s)
+    if s.upper().startswith("INSERT OR IGNORE INTO"):
+        s = re.sub(r'(?i)^INSERT OR IGNORE INTO', 'INSERT INTO', s).rstrip().rstrip(';')
+        s = s + " ON CONFLICT DO NOTHING"
+    return s
+
+class _CursorCompat:
+    def __init__(self, cursor, is_pg: bool):
+        self._c = cursor
+        self._is_pg = is_pg
+    def execute(self, sql, params=None):
+        if self._is_pg:
+            sql = _adapt_sql_for_postgres(sql)
+        if params is None:
+            return self._c.execute(sql)
+        return self._c.execute(sql, params)
 
 def init_db(force=False):
-    db_path = 'sosmed_rekber.db'
-    if force and os.path.exists(db_path):
-        os.remove(db_path)
-        print("Database lama dihapus.")
-
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
+    if _IS_PG:
+        import psycopg
+        conn = psycopg.connect(DATABASE_URL)
+        c = _CursorCompat(conn.cursor(), True)
+        if force:
+            tables = [
+                'platform_stats','shipment_tracking','dispute_evidence','disputes','reports','withdrawals',
+                'vouchers','ratings','comments','messages','affiliate_logs','affiliates','wishlists','carts',
+                'audit_logs','stories','notifications','follows','likes','chat_messages','chat_rooms',
+                'rekber_rooms','post_images','posts','users'
+            ]
+            for t in tables:
+                c.execute(f"DROP TABLE IF EXISTS {t} CASCADE")
+            conn.commit()
+            print("Tabel PostgreSQL lama dihapus.")
+    else:
+        db_path = 'sosmed_rekber.db'
+        if force and os.path.exists(db_path):
+            os.remove(db_path)
+            print("Database lama dihapus.")
+        conn = sqlite3.connect(db_path)
+        c = _CursorCompat(conn.cursor(), False)
 
     c.execute('''CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
