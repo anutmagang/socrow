@@ -39,12 +39,14 @@
       {% if w.status == 'pending' %}
       <div style="display:flex;flex-direction:column;gap:8px;">
         <form method="POST" action="/admin/withdrawal/{{ w.id }}/approve" style="display:flex;gap:6px;align-items:center;">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
           <input type="text" name="admin_note" class="form-input" style="width:140px;padding:7px 10px;font-size:13px;" placeholder="Catatan...">
           <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Setujui penarikan ini?')">
             <i class="fa fa-check"></i> Approve
           </button>
         </form>
         <form method="POST" action="/admin/withdrawal/{{ w.id }}/reject" style="display:flex;gap:6px;align-items:center;">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
           <input type="text" name="admin_note" class="form-input" style="width:140px;padding:7px 10px;font-size:13px;" placeholder="Alasan tolak..." required>
           <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Tolak penarikan ini?')">
             <i class="fa fa-xmark"></i> Tolak

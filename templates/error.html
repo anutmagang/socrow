@@ -1,10 +1,18 @@
 {% extends "base.html" %}
 {% block title %}Error {{ code }} — Socrow{% endblock %}
+
 {% block content %}
-<div style="text-align:center; padding:80px 20px;">
-    <div style="font-family:var(--font-display); font-size:100px; font-weight:800; color:var(--border); line-height:1;">{{ code }}</div>
-    <h2 style="font-family:var(--font-display); font-size:24px; margin-bottom:12px;">{{ message }}</h2>
-    <p style="color:var(--text-muted); margin-bottom:28px;">Halaman yang kamu cari tidak tersedia.</p>
-    <a href="/" class="btn btn-primary"><i class="fa fa-house"></i> Kembali ke Beranda</a>
+<div style="display: flex; align-items: center; justify-content: center; min-height: 60vh; text-align: center; padding: 20px;">
+    <div class="card" style="max-width: 500px; padding: 40px; border-top: 4px solid var(--red);">
+        <lottie-player src="https://assets10.lottiefiles.com/packages/lf20_ghp9m6.json" background="transparent" speed="1" style="width: 200px; height: 200px; margin: 0 auto;" loop autoplay></lottie-player>
+        <h1 style="font-size: 60px; font-family: var(--font-display); color: var(--red); margin-top: -20px; margin-bottom: 10px;">{{ code }}</h1>
+        <h3 style="margin-bottom: 20px;">{{ msg }}</h3>
+        <p style="color: var(--text-secondary); margin-bottom: 30px;">
+            Oops! Sepertinya ada yang tidak beres. Silakan kembali ke beranda atau hubungi bantuan jika masalah berlanjut.
+        </p>
+        <a href="/" class="btn btn-primary btn-lg" style="width: 100%;">
+            <i class="fa fa-home"></i> Kembali ke Beranda
+        </a>
+    </div>
 </div>
 {% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Pilih Jenis Post — Socrow{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto; padding: 40px 20px;">
+    <div style="text-align: center; margin-bottom: 48px;">
+        <h1 style="font-family: var(--font-display); font-size: 32px; font-weight: 800; margin-bottom: 12px;">Apa yang ingin kamu bagikan?</h1>
+        <p style="color: var(--text-secondary); font-size: 16px;">Pilih kategori konten yang ingin kamu buat.</p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">
+        <!-- SOCIAL POST -->
+        <a href="/tambah/post" style="text-decoration: none; color: inherit;">
+            <div class="card" style="padding: 40px; text-align: center; height: 100%; transition: transform 0.2s; cursor: pointer; border: 2px solid transparent;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='transparent'">
+                <div style="width: 80px; height: 80px; border-radius: 24px; background: rgba(108,99,255,0.1); color: var(--accent); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px;">
+                    <i class="fa fa-camera fa-2x"></i>
+                </div>
+                <h2 style="font-family: var(--font-display); margin-bottom: 12px;">Postingan Sosial</h2>
+                <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.6;">
+                    Bagikan foto, video, atau cerita keseharianmu kepada teman-teman dan pengikut.
+                </p>
+                <div class="btn btn-primary" style="margin-top: 24px; width: 100%;">Buat Postingan</div>
+            </div>
+        </a>
+
+        <!-- MARKETPLACE PRODUCT -->
+        <a href="/tambah/produk" style="text-decoration: none; color: inherit;">
+            <div class="card" style="padding: 40px; text-align: center; height: 100%; transition: transform 0.2s; cursor: pointer; border: 2px solid transparent;" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='transparent'">
+                <div style="width: 80px; height: 80px; border-radius: 24px; background: rgba(34,211,160,0.1); color: var(--green); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px;">
+                    <i class="fa fa-shopping-bag fa-2x"></i>
+                </div>
+                <h2 style="font-family: var(--font-display); margin-bottom: 12px;">Jual Produk</h2>
+                <p style="color: var(--text-secondary); font-size: 14px; line-height: 1.6;">
+                    Pasarkan produk fisik atau digitalmu di Marketplace Socrow dengan sistem rekber aman.
+                </p>
+                <div class="btn btn-success" style="margin-top: 24px; width: 100%;">Mulai Berjualan</div>
+            </div>
+        </a>
+    </div>
+</div>
+{% endblock %}

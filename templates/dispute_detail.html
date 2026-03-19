@@ -101,6 +101,7 @@
         {% if d.status == 'open' and session.user_id in [d.buyer_id, d.seller_id] %}
         <div style="margin-top:16px;">
           <form method="POST" enctype="multipart/form-data" action="/dispute/upload_bukti/{{ d.id }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <div class="upload-more">
               <input type="file" name="evidence" multiple accept="image/*,video/mp4,.pdf" onchange="this.form.submit()">
               <i class="fa fa-plus-circle" style="margin-right:8px;"></i> Upload Bukti Tambahan
@@ -145,6 +146,7 @@
           👑 Keputusan Admin
         </div>
         <form method="POST" action="/admin/dispute/{{ d.id }}/verdict">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
           <div class="form-group" style="margin-bottom:14px;">
             <label class="form-label">Keputusan</label>
             <select name="verdict" class="form-input" required>

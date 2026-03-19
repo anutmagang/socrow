@@ -370,6 +370,7 @@
             </div>
 
             <form method="POST" action="/demo_bayar/{{ ext_id }}/proses" id="payForm">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="metode" id="metodeInput" value="Transfer Bank">
                 <button type="submit" class="pay-btn" id="payBtn" onclick="startPay(this)">
                     <div class="spinner"></div>

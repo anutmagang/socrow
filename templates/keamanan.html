@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}Keamanan Akun — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+    <div style="margin-bottom: 32px;">
+        <h1 style="font-family:var(--font-display); font-size:28px;">🛡️ Keamanan & Aktivitas</h1>
+        <p style="color:var(--text-secondary);">Pantau aktivitas akunmu untuk memastikan semuanya tetap aman.</p>
+    </div>
+
+    <div class="card" style="padding: 24px; margin-bottom: 24px;">
+        <h3 style="margin-bottom: 16px;">Sesi Saat Ini</h3>
+        <div style="display: flex; align-items: center; gap: 16px; background: rgba(108,99,255,0.05); padding: 16px; border-radius: 12px; border: 1px solid var(--accent);">
+            <i class="fa fa-desktop fa-2x" style="color: var(--accent);"></i>
+            <div>
+                <div style="font-weight: 700;">{{ request.user_agent.platform }} — {{ request.user_agent.browser }}</div>
+                <div style="font-size: 13px; color: var(--text-muted);">IP: {{ request.remote_addr }} (Sesi Aktif)</div>
+            </div>
+            <div style="margin-left: auto;">
+                <span class="status-badge status-selesai" style="font-size: 11px;">Aktif Sekarang</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="padding: 24px;">
+        <h3 style="margin-bottom: 20px;">Riwayat Aktivitas Terbaru</h3>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            {% for log in logs %}
+            <div style="display: flex; align-items: flex-start; gap: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border);">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: var(--bg-elevated); display: flex; align-items: center; justify-content: center; color: var(--text-secondary);">
+                    {% if 'LOGIN' in log.action %}<i class="fa fa-right-to-bracket"></i>
+                    {% elif 'WITHDRAW' in log.action %}<i class="fa fa-money-bill-transfer"></i>
+                    {% else %}<i class="fa fa-shield-halved"></i>
+                    {% endif %}
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; font-size: 15px;">{{ log.action.replace('_',' ') | title }}</div>
+                    <div style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">
+                        {{ log.detail if log.detail else 'Tidak ada detail tambahan.' }}
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px; display: flex; gap: 12px;">
+                        <span><i class="fa fa-clock"></i> {{ log.created_at }}</span>
+                        <span><i class="fa fa-globe"></i> {{ log.ip_address }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            {% if not logs %}
+            <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+                <i class="fa fa-history fa-3x" style="opacity: 0.2; margin-bottom: 16px; display: block;"></i>
+                Belum ada riwayat aktivitas.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div style="margin-top: 32px; text-align: center;">
+        <p style="font-size: 13px; color: var(--text-muted);">
+            Jika kamu melihat aktivitas yang mencurigakan, segera <a href="/akun" style="color: var(--accent);">ubah kata sandimu</a>.
+        </p>
+    </div>
+</div>
+{% endblock %}

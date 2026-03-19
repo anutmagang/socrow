@@ -26,7 +26,7 @@
 {% endblock %}
 {% block content %}
 <div class="disp-wrap">
-  <a href="/ruang/{{ room.id }}" class="btn btn-ghost btn-sm" style="margin-bottom:20px;">
+  <a href="/ruang/{{ room.uuid }}" class="btn btn-ghost btn-sm" style="margin-bottom:20px;">
     <i class="fa fa-arrow-left"></i> Kembali
   </a>
 
@@ -51,6 +51,7 @@
       </div>
 
       <form method="POST" enctype="multipart/form-data" id="dispForm">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <!-- ALASAN -->
         <div class="form-group">
           <label class="form-label">Alasan Komplain <span style="color:var(--red);">*</span></label>
@@ -90,7 +91,7 @@
         </div>
 
         <div style="display:flex;gap:12px;">
-          <a href="/ruang/{{ room.id }}" class="btn btn-ghost">Batal</a>
+          <a href="/ruang/{{ room.uuid }}" class="btn btn-ghost">Batal</a>
           <button type="submit" class="btn btn-danger" style="flex:1;" onclick="return confirm('Yakin ingin mengajukan komplain? Dana akan dibekukan.')">
             <i class="fa fa-triangle-exclamation"></i> Ajukan Komplain
           </button>

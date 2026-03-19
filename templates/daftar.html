@@ -48,11 +48,13 @@
 <div class="auth-wrap" style="margin-top: -32px;">
     <div class="auth-card">
         <div class="auth-logo">
+            <lottie-player src="https://assets10.lottiefiles.com/packages/lf20_ghp9m6.json" background="transparent" speed="1" style="width: 120px; height: 120px; margin: 0 auto -20px;" loop autoplay></lottie-player>
             <div class="logo-text">So<span>crow</span></div>
             <p>Buat akun gratis — hanya butuh 1 menit</p>
         </div>
 
         <form method="POST" class="auth-form" id="regForm">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
                 <label class="form-label">Username</label>
                 <div class="form-icon-wrap">
@@ -69,7 +71,9 @@
                 <div class="form-icon-wrap">
                     <i class="fa fa-envelope icon"></i>
                     <input type="email" name="email" class="form-input"
-                           placeholder="email@kamu.com" required autocomplete="email">
+                           placeholder="email@kamu.com" required autocomplete="email"
+                           pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
+                           title="Masukkan alamat email yang valid (contoh: user@gmail.com)">
                 </div>
             </div>
 
@@ -78,7 +82,8 @@
                 <div class="form-icon-wrap">
                     <i class="fa fa-phone icon"></i>
                     <input type="tel" name="phone" class="form-input"
-                           placeholder="08xxxxxxxxxx" autocomplete="tel">
+                           placeholder="08xxxxxxxxxx" required autocomplete="tel"
+                           pattern="\d{10,15}" title="Nomor telepon harus 10-15 digit angka">
                 </div>
             </div>
 

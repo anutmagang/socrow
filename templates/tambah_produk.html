@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Jual Produk — Socrow{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <a href="/tambah" class="btn btn-ghost btn-sm" style="margin-bottom: 20px;"><i class="fa fa-arrow-left"></i> Kembali</a>
+    
+    <div class="card" style="padding: 32px; border-top: 4px solid var(--green);">
+        <h1 style="font-family: var(--font-display); font-size: 24px; margin-bottom: 8px;">🛍️ Jual Produk Baru</h1>
+        <p style="color: var(--text-secondary); margin-bottom: 24px;">Pasarkan produkmu ke seluruh pengguna Socrow.</p>
+
+        <form action="/tambah/produk" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label class="form-label">Foto Produk Utama</label>
+                <input type="file" name="media_file" class="form-input" accept="image/*" required>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label class="form-label">Nama & Deskripsi Produk</label>
+                <textarea name="caption" class="form-input" rows="3" placeholder="Contoh: iPhone 13 Pro Max - Mulus Fullset" required></textarea>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                <div class="form-group">
+                    <label class="form-label">Kategori</label>
+                    <select name="product_category" class="form-input">
+                        {% for c in cats %}
+                        <option value="{{ c.id }}">{{ c.id | title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Jenis Produk</label>
+                    <select name="product_kind" class="form-input" onchange="toggleDigital(this.value)">
+                        <option value="fisik">Barang Fisik</option>
+                        <option value="digital">Produk Digital</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                <div class="form-group">
+                    <label class="form-label">Harga (Rp)</label>
+                    <input type="number" name="price" class="form-input" placeholder="0" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Stok</label>
+                    <input type="number" name="stock" class="form-input" value="1" required>
+                </div>
+            </div>
+
+            <div id="fisikFields" class="form-group" style="margin-bottom: 20px;">
+                <label class="form-label">Berat (Gram)</label>
+                <input type="number" name="weight_gram" class="form-input" placeholder="Contoh: 1000">
+                <small style="color: var(--text-muted);">Digunakan untuk simulasi ongkir.</small>
+            </div>
+
+            <div id="digitalFields" class="form-group" style="margin-bottom: 20px; display: none;">
+                <label class="form-label">File Digital (Zip/PDF/etc)</label>
+                <input type="file" name="digital_file" class="form-input">
+                <small style="color: var(--text-muted);">File akan dikirim otomatis setelah bayar.</small>
+            </div>
+
+            <button type="submit" class="btn btn-success btn-full btn-lg" style="margin-top: 12px;">Pasarkan Produk</button>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleDigital(val) {
+    document.getElementById('fisikFields').style.display = val === 'fisik' ? 'block' : 'none';
+    document.getElementById('digitalFields').style.display = val === 'digital' ? 'block' : 'none';
+}
+</script>
+{% endblock %}

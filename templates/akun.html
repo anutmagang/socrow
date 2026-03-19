@@ -183,13 +183,46 @@
     <!-- TABS SECTION -->
     <div>
         <div class="tab-list">
-            <button class="tab-btn active" onclick="switchTab('kyc')"><i class="fa fa-id-card" style="margin-right:6px;"></i>Verifikasi KYC</button>
+            <button class="tab-btn active" onclick="switchTab('profile')"><i class="fa fa-user-pen" style="margin-right:6px;"></i>Profil</button>
+            <button class="tab-btn" onclick="switchTab('kyc')"><i class="fa fa-id-card" style="margin-right:6px;"></i>Verifikasi KYC</button>
             <button class="tab-btn" onclick="switchTab('password')"><i class="fa fa-lock" style="margin-right:6px;"></i>Ubah Password</button>
             <button class="tab-btn" onclick="switchTab('saldo')"><i class="fa fa-wallet" style="margin-right:6px;"></i>Saldo</button>
+            <button class="tab-btn" onclick="switchTab('activity')"><i class="fa fa-history" style="margin-right:6px;"></i>Aktivitas</button>
+        </div>
+
+        <!-- PROFILE TAB -->
+        <div class="tab-panel active" id="tab-profile">
+            <div class="settings-card">
+                <h3>👤 Edit Profil</h3>
+                <form method="POST" class="settings-form" enctype="multipart/form-data">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="form_type" value="profile">
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                        <div class="form-group">
+                            <label class="form-label">Foto Profil</label>
+                            <input type="file" name="avatar" class="form-input" accept="image/*">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Foto Sampul</label>
+                            <input type="file" name="cover" class="form-input" accept="image/*">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <textarea name="bio" class="form-input" rows="3" placeholder="Tulis sesuatu tentang kamu..." maxlength="200">{{ user.bio or '' }}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Website / Link</label>
+                        <input type="url" name="website" class="form-input" placeholder="https://..." value="{{ user.website or '' }}">
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Simpan Perubahan</button>
+                </form>
+            </div>
         </div>
 
         <!-- KYC TAB -->
-        <div class="tab-panel active" id="tab-kyc">
+        <div class="tab-panel" id="tab-kyc">
             <div class="settings-card">
                 <h3>🪪 Verifikasi Identitas (KYC)</h3>
                 <p style="font-size:14px; color:var(--text-muted); margin-bottom:24px;">
@@ -215,6 +248,7 @@
                 </div>
                 {% else %}
                 <form method="POST" enctype="multipart/form-data" class="settings-form">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="form_type" value="finance">
                     <div class="form-group">
                         <label class="form-label">Nama Lengkap (sesuai KTP)</label>
@@ -258,6 +292,7 @@
             <div class="settings-card">
                 <h3>🔐 Ubah Password</h3>
                 <form method="POST" class="settings-form">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="form_type" value="password">
                     <div class="form-group">
                         <label class="form-label">Password Lama</label>
@@ -296,6 +331,28 @@
                 {% endif %}
             </div>
         </div>
+
+        <!-- ACTIVITY TAB -->
+        <div class="tab-panel" id="tab-activity">
+            <div class="settings-card">
+                <h3>🕒 Aktivitas Login & Keamanan</h3>
+                <div style="display:flex; flex-direction:column; gap:12px; margin-top:16px;">
+                    {% for a in activities %}
+                    <div style="padding:14px; background:var(--bg-elevated); border-radius:var(--radius-sm); border-left:3px solid var(--accent);">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                            <strong style="font-size:14px;">{{ a.action }}</strong>
+                            <span style="font-size:11px; color:var(--text-muted);">{{ a.created_at }}</span>
+                        </div>
+                        <div style="font-size:12px; color:var(--text-secondary); margin-bottom:4px;">{{ a.detail }}</div>
+                        <div style="font-size:11px; color:var(--text-muted);"><i class="fa fa-location-dot"></i> {{ a.ip_address }}</div>
+                    </div>
+                    {% endfor %}
+                    {% if not activities %}
+                    <p style="text-align:center; color:var(--text-muted);">Belum ada catatan aktivitas.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -306,7 +363,10 @@ function switchTab(id) {
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('tab-' + id).classList.add('active');
-    event.target.classList.add('active');
+    
+    // Find the button that was clicked and add active class
+    const clickedBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes(id));
+    if (clickedBtn) clickedBtn.classList.add('active');
 }
 </script>
 {% endblock %}

@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+{% block title %}Chat dengan {{ other_user.username }} — Socrow{% endblock %}
+
+{% block head %}
+<style>
+    .chat-container {
+        max-width: 800px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 160px);
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        overflow: hidden;
+    }
+
+    .chat-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: rgba(255,255,255,0.02);
+    }
+
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .bubble {
+        max-width: 70%;
+        padding: 10px 14px;
+        border-radius: var(--radius-md);
+        font-size: 14px;
+        line-height: 1.5;
+        position: relative;
+    }
+
+    .bubble img {
+        max-width: 100%;
+        border-radius: var(--radius-sm);
+        margin-top: 8px;
+        display: block;
+        cursor: pointer;
+    }
+
+    .bubble.me {
+        align-self: flex-end;
+        background: var(--accent);
+        color: white;
+        border-bottom-right-radius: 4px;
+    }
+
+    .bubble.other {
+        align-self: flex-start;
+        background: var(--bg-elevated);
+        color: var(--text-primary);
+        border-bottom-left-radius: 4px;
+    }
+
+    .bubble .time {
+        font-size: 10px;
+        opacity: 0.7;
+        margin-top: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 4px;
+    }
+
+    .read-status { color: rgba(255,255,255,0.5); }
+    .read-status.read { color: var(--green); }
+
+    .chat-input-area {
+        padding: 16px 20px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        gap: 12px;
+    }
+
+    @media (max-width: 600px) {
+        .chat-container { height: calc(100vh - 120px); border-radius: 0; border: none; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="chat-container">
+    <div class="chat-header">
+        <a href="/dm" class="btn btn-ghost btn-sm" style="padding: 8px;"><i class="fa fa-arrow-left"></i></a>
+        <div class="avatar" style="width: 36px; height: 36px; font-size: 14px;">{{ other_user.username[0].upper() }}</div>
+        <div>
+            <strong style="display: block; font-size: 15px;">{{ other_user.username }}{% if other_user.kyc_status == 'verified' %}<i class="fa fa-circle-check" style="color:var(--accent); font-size:12px; margin-left:4px;"></i>{% endif %}</strong>
+            {% if is_online(other_user.last_seen) %}
+            <small id="onlineStatus" style="color: var(--green); font-size: 11px;"><i class="fa fa-circle" style="font-size: 8px;"></i> Online</small>
+            {% else %}
+            <small id="onlineStatus" style="color: var(--text-muted); font-size: 11px;">Aktif {{ other_user.last_seen[:16] if other_user.last_seen else 'Baru saja' }}</small>
+            {% endif %}
+            <small id="typingIndicator" style="display: none; color: var(--accent-light); font-size: 11px; font-style: italic;">Sedang mengetik...</small>
+        </div>
+    </div>
+
+    <div class="chat-messages" id="dmBox">
+        {% for m in messages %}
+        <div class="bubble {% if m.sender_id == session.user_id %}me{% else %}other{% endif %}">
+            {% if m.message_type == 'image' %}
+            <img src="/static/uploads/{{ m.file_url }}" onclick="window.open(this.src)">
+            {% endif %}
+            {% if m.message_text %}
+            <div style="margin-top: 4px;">{{ m.message_text }}</div>
+            {% endif %}
+            <span class="time">
+                {{ m.created_at[:16] }}
+                {% if m.sender_id == session.user_id %}
+                <i class="fa-solid fa-check-double read-status {% if m.is_read %}read{% endif %}"></i>
+                {% endif %}
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <form id="dmForm" class="chat-input-area" enctype="multipart/form-data">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('chatFile').click()" style="width: 46px; padding: 0; justify-content: center;">
+            <i class="fa fa-image"></i>
+        </button>
+        <input type="file" id="chatFile" name="chat_file" style="display: none;" accept="image/*" onchange="previewChatImage(this)">
+        <input type="text" id="dmInput" class="form-input" placeholder="Tanya sesuatu..." autocomplete="off">
+        <button type="submit" class="btn btn-primary" style="width: 46px; padding: 0; justify-content: center;">
+            <i class="fa fa-paper-plane"></i>
+        </button>
+    </form>
+</div>
+
+<!-- Image Preview Overlay -->
+<div id="chatImagePreview" style="display: none; position: absolute; bottom: 80px; left: 20px; right: 20px; background: var(--bg-elevated); padding: 10px; border-radius: 12px; border: 1px solid var(--accent); z-index: 10;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span style="font-size: 12px; font-weight: 700;">Pratinjau Gambar</span>
+        <i class="fa fa-xmark" style="cursor: pointer;" onclick="cancelChatImage()"></i>
+    </div>
+    <img id="previewImg" src="" style="max-height: 100px; border-radius: 8px;">
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const roomId = "{{ room.uuid }}";
+    const myId = "{{ session.user_id }}";
+    const dmBox = document.getElementById('dmBox');
+    const dmForm = document.getElementById('dmForm');
+    const dmInput = document.getElementById('dmInput');
+
+    dmBox.scrollTop = dmBox.scrollHeight;
+
+    socket.emit('join_dm', { room_id: roomId });
+
+    socket.on('new_dm', (data) => {
+        if (data.room_id == roomId) {
+            const isMe = data.sender_id == myId;
+            const div = document.createElement('div');
+            div.className = `bubble ${isMe ? 'me' : 'other'}`;
+            
+            let html = '';
+            if (data.message_type === 'image') {
+                html += `<img src="/static/uploads/${data.file_url}" onclick="window.open(this.src)">`;
+            }
+            if (data.message) {
+                html += `<div style="margin-top:4px;">${data.message}</div>`;
+            }
+            html += `<span class="time">${data.created_at}`;
+            if (isMe) {
+                html += ` <i class="fa-solid fa-check-double read-status"></i>`;
+            }
+            html += `</span>`;
+            
+            div.innerHTML = html;
+            dmBox.appendChild(div);
+            dmBox.scrollTop = dmBox.scrollHeight;
+        }
+    });
+
+    socket.on('messages_read', (data) => {
+        if (data.room_id == roomId && data.reader_id != myId) {
+            document.querySelectorAll('.bubble.me .read-status').forEach(el => {
+                el.classList.add('read');
+            });
+        }
+    });
+
+    // Typing Indicator Logic
+    let typingTimeout;
+    dmInput.addEventListener('input', () => {
+        socket.emit('typing', { room_id: roomId });
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => {
+            socket.emit('stop_typing', { room_id: roomId });
+        }, 2000);
+    });
+
+    socket.on('is_typing', (data) => {
+        if (data.user_id != myId) {
+            document.getElementById('onlineStatus').style.display = 'none';
+            document.getElementById('typingIndicator').style.display = 'block';
+        }
+    });
+
+    socket.on('not_typing', (data) => {
+        if (data.user_id != myId) {
+            document.getElementById('onlineStatus').style.display = 'block';
+            document.getElementById('typingIndicator').style.display = 'none';
+        }
+    });
+
+    function previewChatImage(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('previewImg').src = e.target.result;
+                document.getElementById('chatImagePreview').style.display = 'block';
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function cancelChatImage() {
+        document.getElementById('chatFile').value = '';
+        document.getElementById('chatImagePreview').style.display = 'none';
+    }
+
+    dmForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const text = dmInput.value.trim();
+        const fileInput = document.getElementById('chatFile');
+        
+        if (!text && !fileInput.files.length) return;
+
+        const formData = new FormData();
+        if (text) formData.append('teks', text);
+        if (fileInput.files.length) formData.append('chat_file', fileInput.files[0]);
+
+        dmInput.value = '';
+        cancelChatImage();
+        
+        await fetch(`/dm/send/{{ room.uuid }}`, { 
+            method: 'POST', 
+            body: formData,
+            headers: { 'X-CSRFToken': csrfToken }
+        });
+    });
+</script>
+{% endblock %}

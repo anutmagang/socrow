@@ -51,9 +51,9 @@ Buka: **http://127.0.0.1:5000**
 
 | Username | Email | Password | Role |
 |----------|-------|----------|------|
-| admin | admin@socrow.com | admin123 | Admin |
-| penjual | penjual@socrow.com | penjual123 | Penjual |
-| pembeli | pembeli@socrow.com | pembeli123 | Pembeli |
+| admin | admin@socrow.com | (lihat output `python seed.py`) | Admin |
+| penjual | penjual@socrow.com | (lihat output `python seed.py`) | Penjual |
+| pembeli | pembeli@socrow.com | (lihat output `python seed.py`) | Pembeli |
 
 ---
 

@@ -1,449 +1,515 @@
 {% extends "base.html" %}
-{% block title %}Socrow — Beranda{% endblock %}
+{% block title %}Beranda — Socrow Social{% endblock %}
 
 {% block head %}
 <style>
-    .feed-grid {
-        display: grid;
-        grid-template-columns: 1fr 320px;
-        gap: 28px;
-        align-items: start;
-    }
+    .social-container { max-width: 600px; margin: 0 auto; }
 
-    @media (max-width: 900px) {
-        .feed-grid { grid-template-columns: 1fr; }
-        .sidebar { display: none; }
+    /* STORIES */
+    .stories-bar {
+        display: flex;
+        gap: 16px;
+        overflow-x: auto;
+        padding: 10px 0 30px;
+        scrollbar-width: none;
     }
+    .stories-bar::-webkit-scrollbar { display: none; }
+    
+    .story-item {
+        flex: 0 0 70px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+    }
+    .story-circle {
+        width: 66px; height: 66px;
+        border-radius: 50%;
+        padding: 3px;
+        background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+        display: flex; align-items: center; justify-content: center;
+    }
+    .story-inner {
+        width: 100%; height: 100%;
+        border-radius: 50%;
+        background: var(--bg-card);
+        border: 2px solid var(--bg-primary);
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 800; font-family: var(--font-display); color: #fff;
+        font-size: 20px;
+        overflow: hidden;
+    }
+    .story-inner img { width: 100%; height: 100%; object-fit: cover; }
+    .story-name { font-size: 11px; color: var(--text-secondary); width: 100%; text-align: center; overflow: hidden; text-overflow: ellipsis; }
 
-    /* POST CARD */
+    /* POSTS */
+    .social-feed { display: flex; flex-direction: column; gap: 32px; }
+    
     .post-card {
         background: var(--bg-card);
         border: 1px solid var(--border);
-        border-radius: var(--radius-lg);
+        border-radius: var(--radius-xl);
         overflow: hidden;
-        transition: border-color 0.2s, transform 0.2s;
-        animation: fadeUp 0.4s ease both;
     }
-    .post-card:hover { border-color: var(--border-hover); transform: translateY(-2px); }
-
-    @keyframes fadeUp {
-        from { opacity:0; transform: translateY(16px); }
-        to   { opacity:1; transform: translateY(0); }
-    }
-
-    .post-card:nth-child(1) { animation-delay: 0s; }
-    .post-card:nth-child(2) { animation-delay: 0.06s; }
-    .post-card:nth-child(3) { animation-delay: 0.12s; }
-    .post-card:nth-child(4) { animation-delay: 0.18s; }
-    .post-card:nth-child(5) { animation-delay: 0.24s; }
 
     .post-header {
+        padding: 16px 20px;
         display: flex;
         align-items: center;
         gap: 12px;
-        padding: 16px 18px 12px;
     }
+    .post-user-info { flex: 1; }
+    .post-user-info strong { display: block; font-size: 14px; }
+    .post-user-info span { font-size: 11px; color: var(--text-muted); }
 
-    .post-username {
-        font-weight: 700;
-        font-size: 14px;
-        color: var(--text-primary);
+    .post-img-wrap { 
+        width: 100%; 
+        position: relative; 
+        background: var(--bg-elevated); 
+        aspect-ratio: 1 / 1; 
+        overflow: hidden; 
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
-    .post-time {
-        font-size: 12px;
-        color: var(--text-muted);
-    }
-
-    .post-media {
+    .post-img-wrap img, .post-img-wrap video {
         width: 100%;
-        max-height: 480px;
+        height: 100%;
         object-fit: cover;
-        display: block;
-        background: var(--bg-elevated);
     }
-
-    .post-body {
-        padding: 14px 18px;
+    
+    /* CAROUSEL */
+    .carousel { position: relative; width: 100%; }
+    .carousel-inner { display: flex; transition: transform 0.3s ease; }
+    .carousel-item { min-width: 100%; object-fit: cover; }
+    .carousel-dots {
+        position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+        display: flex; gap: 6px;
     }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.4); }
+    .dot.active { background: #fff; width: 12px; border-radius: 3px; }
 
-    .post-caption {
-        font-size: 15px;
-        color: var(--text-primary);
-        line-height: 1.6;
-        margin-bottom: 12px;
-    }
+    .post-content { padding: 16px 20px; }
+    .post-interactions { display: flex; gap: 16px; margin-bottom: 12px; font-size: 20px; }
+    .post-interactions i { cursor: pointer; transition: transform 0.2s; }
+    .post-interactions i:hover { transform: scale(1.1); }
+    .post-interactions .liked { color: var(--red); }
+    .post-interactions .save-btn { margin-left: auto; }
 
-    .post-price-tag {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        background: linear-gradient(135deg, rgba(34,211,160,0.1), rgba(108,99,255,0.08));
-        border: 1px solid rgba(34,211,160,0.2);
-        border-radius: var(--radius-sm);
-        padding: 10px 14px;
-        margin-bottom: 12px;
+    .post-likes-count { font-size: 14px; font-weight: 700; margin-bottom: 6px; display: block; }
+    .post-caption { font-size: 14px; line-height: 1.5; color: var(--text-primary); }
+    .post-caption strong { margin-right: 6px; }
+
+    /* STORY VIEWER */
+    .story-viewer {
         width: 100%;
-    }
-
-    .post-price-tag .price-val {
-        font-family: var(--font-display);
-        font-weight: 700;
-        font-size: 18px;
-        color: var(--green);
-    }
-
-    .post-price-tag .price-label {
-        font-size: 12px;
-        color: var(--text-muted);
-        margin-left: auto;
-    }
-
-    .post-actions {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        padding: 10px 14px;
-        border-top: 1px solid var(--border);
-    }
-
-    .action-btn {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 7px 12px;
-        border-radius: var(--radius-sm);
-        background: none;
-        border: none;
-        color: var(--text-muted);
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-        font-family: var(--font-body);
-    }
-
-    .action-btn:hover { color: var(--text-primary); background: var(--bg-elevated); }
-    .action-btn.liked { color: var(--red); }
-    .action-btn.liked i { animation: heartPop 0.3s ease; }
-
-    @keyframes heartPop {
-        0%   { transform: scale(1); }
-        50%  { transform: scale(1.4); }
-        100% { transform: scale(1); }
-    }
-
-    .buy-btn {
-        margin-left: auto;
-        background: var(--accent);
-        color: #fff;
-        padding: 8px 18px;
-        border-radius: var(--radius-sm);
-        font-size: 13px;
-        font-weight: 700;
-        border: none;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 7px;
-        transition: all 0.2s;
-        text-decoration: none;
-        font-family: var(--font-body);
-    }
-
-    .buy-btn:hover {
-        background: var(--accent-light);
-        transform: scale(1.03);
-        box-shadow: 0 4px 16px var(--accent-glow);
-    }
-
-    /* SIDEBAR */
-    .sidebar-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-lg);
-        padding: 20px;
-        margin-bottom: 20px;
-    }
-
-    .sidebar-title {
-        font-family: var(--font-display);
-        font-size: 14px;
-        font-weight: 700;
-        color: var(--text-secondary);
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-bottom: 16px;
-    }
-
-    .guarantee-item {
-        display: flex;
-        align-items: flex-start;
-        gap: 12px;
-        margin-bottom: 14px;
-    }
-
-    .guarantee-icon {
-        width: 36px; height: 36px;
-        border-radius: var(--radius-sm);
-        display: flex; align-items: center; justify-content: center;
-        font-size: 16px;
-        flex-shrink: 0;
-    }
-
-    .guarantee-text strong {
-        display: block;
-        font-size: 14px;
-        color: var(--text-primary);
-        margin-bottom: 2px;
-    }
-
-    .guarantee-text small { font-size: 12px; color: var(--text-muted); }
-
-    .hero-banner {
-        background: linear-gradient(135deg, rgba(108,99,255,0.15) 0%, rgba(34,211,160,0.08) 100%);
-        border: 1px solid rgba(108,99,255,0.2);
-        border-radius: var(--radius-xl);
-        padding: 32px;
-        margin-bottom: 28px;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .hero-banner::before {
-        content: '🛡️';
-        position: absolute;
-        right: 24px;
-        top: 50%;
-        transform: translateY(-50%);
-        font-size: 72px;
-        opacity: 0.12;
-    }
-
-    .hero-banner h1 {
-        font-family: var(--font-display);
-        font-size: 28px;
-        font-weight: 800;
-        margin-bottom: 8px;
-        letter-spacing: -0.5px;
-    }
-
-    .hero-banner h1 span { color: var(--accent-light); }
-
-    .hero-banner p {
-        color: var(--text-secondary);
-        font-size: 15px;
         max-width: 400px;
-        margin-bottom: 20px;
-    }
-
-    .stats-row {
+        height: 80vh;
+        background: #000;
+        border-radius: var(--radius-lg);
         display: flex;
-        gap: 24px;
-        flex-wrap: wrap;
+        flex-direction: column;
+        position: relative;
     }
-
-    .stat-item strong {
-        display: block;
-        font-family: var(--font-display);
-        font-size: 20px;
-        font-weight: 700;
-        color: var(--text-primary);
+    .story-viewer-header {
+        padding: 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: #fff;
+        background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+        z-index: 10;
+        position: absolute; top:0; left:0; right:0;
     }
+    .story-viewer-body { flex: 1; display: flex; align-items: center; justify-content: center; }
+    .story-viewer-body img, .story-viewer-body video { width: 100%; height: 100%; object-fit: contain; }
 
-    .stat-item small { font-size: 12px; color: var(--text-muted); }
+    @media (max-width: 600px) {
+        .social-container { padding: 0; }
+        .post-card { border-radius: 0; border-left: none; border-right: none; }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-
-{% if not session.user_id %}
-<!-- HERO UNTUK GUEST -->
-<div class="hero-banner">
-    <h1>Jual Beli <span>Tanpa Khawatir</span> 🛡️</h1>
-    <p>Socrow menjamin dana kamu aman sampai barang diterima. Platform sosial rekber pertama di Indonesia.</p>
-    <div style="display:flex; gap:12px; flex-wrap:wrap;">
-        <a href="/daftar" class="btn btn-primary btn-lg"><i class="fa fa-rocket"></i> Mulai Sekarang</a>
-        <a href="/syarat-ketentuan" class="btn btn-ghost btn-lg">Pelajari Lebih</a>
-    </div>
-    <div class="divider"></div>
-    <div class="stats-row">
-        <div class="stat-item"><strong>2%</strong><small>Biaya rekber</small></div>
-        <div class="stat-item"><strong>100%</strong><small>Dana terjamin</small></div>
-        <div class="stat-item"><strong>24/7</strong><small>Sistem aktif</small></div>
-    </div>
-</div>
-{% endif %}
-
-<div class="feed-grid">
-    <!-- FEED -->
-    <div class="feed-col">
-        {% if session.user_id %}
-        <div style="margin-bottom:20px;">
-            <a href="/tambah" class="btn btn-primary" style="margin-right:10px;"><i class="fa fa-plus"></i> Buat Post</a>
-            <span style="color:var(--text-muted); font-size:14px;">Bagikan sesuatu atau jual produkmu</span>
-        </div>
-        {% endif %}
-
-        {% if posts %}
-            <div style="display:flex; flex-direction:column; gap:20px;">
-            {% for post in posts %}
-            <div class="post-card">
-                <div class="post-header">
-                    <div class="avatar">{{ post.username[0].upper() }}</div>
-                    <div>
-                        <div class="post-username">
-                            {{ post.username }}
-                            {% if post.kyc_status == 'verified' %}
-                            <span class="badge badge-verified" style="margin-left:6px; font-size:10px;">
-                                <i class="fa fa-check"></i> Terverifikasi
-                            </span>
-                            {% endif %}
-                        </div>
-                        <div class="post-time"><i class="fa fa-clock" style="margin-right:4px;"></i>{{ post.created_at[:10] if post.created_at else 'Baru saja' }}</div>
-                    </div>
-                    {% if post.is_for_sale %}
-                    <span class="badge badge-accent" style="margin-left:auto;"><i class="fa fa-tag"></i> Dijual</span>
-                    {% endif %}
+<div class="social-container">
+    
+    <!-- STORIES BAR -->
+    <div class="stories-bar">
+        <div class="story-item" onclick="document.getElementById('storyInput').click()">
+            <form id="storyForm" action="/story/tambah" method="POST" enctype="multipart/form-data" style="display:none;">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="file" name="story_file" id="storyInput" accept="image/*,video/*" onchange="this.form.submit()">
+            </form>
+            <div class="story-circle" style="background: var(--bg-elevated);">
+                <div class="story-inner" style="background: var(--bg-elevated); color: var(--text-muted);">
+                    <i class="fa fa-plus"></i>
                 </div>
-
-                {% if post.media_url %}
-                    {% if post.post_type == 'video' %}
-                        <video class="post-media" controls preload="none">
-                            <source src="/static/uploads/{{ post.media_url }}" type="video/mp4">
-                        </video>
+            </div>
+            <span class="story-name">Ceritaku</span>
+        </div>
+        {% for s in stories %}
+        <div class="story-item" onclick="viewStory('{{ s.media_url }}', '{{ s.username }}')">
+            <div class="story-circle">
+                <div class="story-inner">
+                    {% if s.media_url %}
+                    {% if s.media_url.endswith('.mp4') %}
+                    <video src="/static/uploads/{{ s.media_url }}" style="width:100%; height:100%; object-fit:cover;"></video>
                     {% else %}
-                        <img class="post-media" src="/static/uploads/{{ post.media_url }}"
-                             alt="Post media" loading="lazy"
-                             onerror="this.style.display='none'">
+                    <img src="/static/uploads/{{ s.media_url }}">
                     {% endif %}
-                {% endif %}
-
-                <div class="post-body">
-                    <p class="post-caption">{{ post.caption }}</p>
-
-                    {% if post.is_for_sale %}
-                    <div class="post-price-tag">
-                        <i class="fa fa-shield-halved" style="color:var(--green);"></i>
-                        <span class="price-val">{{ post.price | rupiah }}</span>
-                        <span class="price-label">Stok: {{ post.stock }}</span>
-                    </div>
+                    {% else %}
+                    {{ s.username[0].upper() }}
                     {% endif %}
                 </div>
+            </div>
+            <span class="story-name">{{ s.username }}</span>
+        </div>
+        {% endfor %}
+    </div>
 
-                <div class="post-actions">
-                    <button class="action-btn like-btn" data-post="{{ post.id }}" data-liked="0">
-                        <i class="fa fa-heart"></i>
-                        <span class="like-count">{{ post.like_count }}</span>
-                    </button>
-                    <button class="action-btn"><i class="fa fa-comment"></i> {{ post.comment_count }}</button>
+    <!-- STORY MODAL -->
+    <div id="storyModal" class="modal-overlay" style="display:none; z-index:1000;" onclick="closeStory()">
+        <div class="story-viewer" onclick="event.stopPropagation()">
+            <div class="story-viewer-header">
+                <div class="avatar" id="storyUserAvatar" style="width:30px; height:30px;"></div>
+                <span id="storyUserName" style="font-weight:700;"></span>
+                <i class="fa fa-xmark" style="margin-left:auto; cursor:pointer;" onclick="closeStory()"></i>
+            </div>
+            <div id="storyViewerContent" class="story-viewer-body"></div>
+        </div>
+    </div>
 
-                    {% if post.is_for_sale and session.user_id and post.user_id != session.user_id %}
-                    <form action="/bayar_xendit/{{ post.id }}" method="POST" style="margin-left:auto;">
-                        <button type="submit" class="buy-btn">
-                            <i class="fa fa-shield-halved"></i> Beli Aman
-                        </button>
-                    </form>
-                    {% elif post.is_for_sale and not session.user_id %}
-                    <a href="/login" class="buy-btn" style="margin-left:auto;">
-                        <i class="fa fa-lock"></i> Login untuk Beli
+    <!-- FEED -->
+    <div class="social-feed" id="postContainer">
+        {% if session.user_id %}
+        <div class="card" style="padding: 16px 20px; border-radius: var(--radius-lg); margin-bottom: 10px;">
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <div class="avatar" style="width: 36px; height: 36px;">{{ session.username[0].upper() }}</div>
+                <a href="/tambah" style="flex: 1; background: var(--bg-elevated); padding: 10px 16px; border-radius: 20px; color: var(--text-muted); text-decoration: none; font-size: 14px;">
+                    Apa yang anda pikirkan, {{ session.username }}?
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+        {% for p in posts %}
+        <article class="post-card">
+            <div class="post-header">
+                <a href="/user/{{ p.username }}" class="avatar" style="width:34px; height:34px; text-decoration:none;">{{ p.username[0].upper() }}</a>
+                <div class="post-user-info">
+                    <a href="/user/{{ p.username }}" style="text-decoration:none; color:inherit;">
+                        <strong style="display:flex; align-items:center; gap:4px;">
+                        @{{ p.username }}
+                        {% if p.kyc_status == 'verified' %}
+                        <i class="fa-solid fa-circle-check" style="color:var(--accent); font-size:12px;"></i>
+                        {% endif %}
+                        {% set badge = get_seller_badge(p.user_id) %}
+                        {% if badge %}
+                        <i class="fa {{ badge.icon }}" style="color:{{ badge.color }}; font-size:12px;" title="{{ badge.name }}"></i>
+                        {% endif %}
+                    </strong>
                     </a>
+                    <span>{{ p.created_at[:10] }}</span>
+                </div>
+                <div class="dropdown" style="margin-left:auto; position:relative;">
+                    <i class="fa fa-ellipsis" style="cursor:pointer;" onclick="togglePostDropdown('{{ p.uuid }}')"></i>
+                    <div id="dropdown-{{ p.uuid }}" class="dropdown-content" style="display:none; position:absolute; right:0; top:20px; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; min-width:140px; z-index:100; box-shadow:0 4px 12px rgba(0,0,0,0.1); overflow: hidden;">
+                        {% if session.user_id == p.user_id %}
+                        <a href="/post/edit/{{ p.uuid }}" style="display:block; width:100%; padding:10px 16px; text-decoration:none; color:var(--text-primary); font-size:13px; text-align:left; cursor:pointer; font-weight:600; border-bottom:1px solid var(--border);">
+                            <i class="fa fa-pen-to-square" style="margin-right:8px;"></i> Edit Post
+                        </a>
+                        <form action="/post/delete/{{ p.uuid }}" method="POST" onsubmit="return confirm('Hapus postingan ini?')">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" style="width:100%; padding:10px 16px; border:none; background:none; color:var(--red); font-size:13px; text-align:left; cursor:pointer; font-weight:600;">
+                                <i class="fa fa-trash" style="margin-right:8px;"></i> Hapus Post
+                            </button>
+                        </form>
+                        {% else %}
+                        <button onclick="openReportModal('post', '{{ p.uuid }}')" style="width:100%; padding:10px 16px; border:none; background:none; color:var(--red); font-size:13px; text-align:left; cursor:pointer; font-weight:600;">
+                            <i class="fa fa-flag" style="margin-right:8px;"></i> Laporkan
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% if p.media_url %}
+            <div class="post-img-wrap">
+                {% if p.post_type == 'video' %}
+                <video src="/static/uploads/{{ p.media_url }}" controls></video>
+                {% else %}
+                    <div class="carousel" id="carousel-{{ p.uuid }}">
+                        <div class="carousel-inner">
+                            <img src="/static/uploads/{{ p.media_url }}" class="carousel-item active">
+                            {% for img in p.images %}
+                            <img src="/static/uploads/{{ img.image_url }}" class="carousel-item">
+                            {% endfor %}
+                        </div>
+                        {% if p.images|length > 0 %}
+                        <div class="carousel-dots">
+                            <span class="dot active"></span>
+                            {% for _ in p.images %}<span class="dot"></span>{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <div class="post-content">
+                <div class="post-interactions">
+                    <i class="fa-regular fa-heart like-btn" data-post="{{ p.uuid }}"></i>
+                    <i class="fa-regular fa-comment comment-toggle-btn" data-post="{{ p.uuid }}"></i>
+                    <i class="fa-regular fa-paper-plane"></i>
+                    <i class="fa-regular fa-bookmark save-btn" data-post="{{ p.uuid }}"></i>
+                </div>
+                <span class="post-likes-count"><span class="count-val">{{ p.like_count }}</span> suka</span>
+                <p class="post-caption">
+                    <a href="/user/{{ p.username }}" style="text-decoration:none; color:inherit;"><strong>{{ p.username }}</strong></a>
+                    {{ p.caption | hashtags | safe }}
+                </p>
+
+                <!-- COMMENTS SECTION -->
+                <div class="comment-section" id="comment-sec-{{ p.uuid }}" style="display:none; margin-top:14px; border-top:1px solid var(--border); padding-top:10px;">
+                    <div class="comment-list" id="comment-list-{{ p.uuid }}" style="max-height:200px; overflow-y:auto; margin-bottom:12px;">
+                        <!-- JS WILL POPULATE THIS -->
+                    </div>
+                    {% if session.user_id %}
+                    <form onsubmit="postComment(event, '{{ p.uuid }}')" style="display:flex; gap:8px;">
+                        <input type="text" id="comment-input-{{ p.uuid }}" class="form-input" placeholder="Tambah komentar..." style="flex:1; font-size:13px; padding:8px 12px;">
+                        <button type="submit" class="btn btn-primary btn-sm">Kirim</button>
+                    </form>
                     {% endif %}
                 </div>
             </div>
-            {% endfor %}
-            </div>
-        {% else %}
-        <div class="card empty-state">
-            <i class="fa fa-ghost"></i>
-            <h3>Belum ada postingan</h3>
-            <p>Jadilah yang pertama posting di Socrow!</p>
-            {% if session.user_id %}
-            <a href="/tambah" class="btn btn-primary" style="margin-top:16px;">Buat Post Pertama</a>
-            {% endif %}
+        </article>
+        {% endfor %}
+
+        {% if not posts %}
+        <div class="empty-state">
+            <i class="fa fa-icons"></i>
+            <h3>Feed Kosong</h3>
+            <p>Mulai ikuti orang lain untuk melihat postingan mereka.</p>
         </div>
         {% endif %}
     </div>
-
-    <!-- SIDEBAR -->
-    <aside class="sidebar">
-        <div class="sidebar-card">
-            <div class="sidebar-title">🛡️ Jaminan Socrow</div>
-
-            <div class="guarantee-item">
-                <div class="guarantee-icon" style="background:rgba(34,211,160,0.1);">💰</div>
-                <div class="guarantee-text">
-                    <strong>Dana Aman</strong>
-                    <small>Dana pembeli disimpan Socrow sampai barang tiba</small>
-                </div>
-            </div>
-
-            <div class="guarantee-item">
-                <div class="guarantee-icon" style="background:rgba(108,99,255,0.1);">🔒</div>
-                <div class="guarantee-text">
-                    <strong>Penjual Terverifikasi</strong>
-                    <small>Setiap penjual wajib KYC dengan dokumen resmi</small>
-                </div>
-            </div>
-
-            <div class="guarantee-item">
-                <div class="guarantee-icon" style="background:rgba(245,200,66,0.1);">⚡</div>
-                <div class="guarantee-text">
-                    <strong>Pembayaran Instan</strong>
-                    <small>Powered by Xendit — transfer ke penjual otomatis</small>
-                </div>
-            </div>
-
-            <div class="guarantee-item" style="margin-bottom:0">
-                <div class="guarantee-icon" style="background:rgba(255,85,114,0.1);">🏛️</div>
-                <div class="guarantee-text">
-                    <strong>Mediasi Sengketa</strong>
-                    <small>Tim admin siap bantu jika ada masalah</small>
-                </div>
-            </div>
-        </div>
-
-        {% if not session.user_id %}
-        <div class="sidebar-card" style="background: linear-gradient(135deg, rgba(108,99,255,0.1), rgba(34,211,160,0.05)); border-color:rgba(108,99,255,0.2);">
-            <div class="sidebar-title">🚀 Mulai Sekarang</div>
-            <p style="font-size:14px; color:var(--text-secondary); margin-bottom:16px;">Daftar gratis dan mulai jual beli dengan aman.</p>
-            <a href="/daftar" class="btn btn-primary btn-full"><i class="fa fa-user-plus"></i> Daftar Gratis</a>
-            <a href="/login" class="btn btn-ghost btn-full" style="margin-top:8px;">Sudah punya akun? Masuk</a>
-        </div>
-        {% endif %}
-
-        <div class="sidebar-card">
-            <div class="sidebar-title">📊 Cara Kerja</div>
-            {% for step in [('1', 'Pilih produk', 'fa-magnifying-glass'), ('2', 'Bayar ke Socrow', 'fa-shield-halved'), ('3', 'Penjual kirim', 'fa-truck'), ('4', 'Konfirmasi & selesai', 'fa-check-circle')] %}
-            <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
-                <div style="width:28px; height:28px; background:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; flex-shrink:0; font-family:var(--font-display);">{{ step[0] }}</div>
-                <div style="display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text-secondary);">
-                    <i class="fa {{ step[2] }}" style="color:var(--accent-light); width:16px; text-align:center;"></i>
-                    {{ step[1] }}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </aside>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-// Like toggle via fetch
-document.querySelectorAll('.like-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-        {% if not session.user_id %}
-        window.location.href = '/login';
-        return;
-        {% endif %}
-        const postId = btn.dataset.post;
-        const res = await fetch(`/like/${postId}`, { method: 'POST' });
-        if (res.ok) {
-            const data = await res.json();
-            btn.querySelector('.like-count').textContent = data.count;
-            btn.classList.toggle('liked', data.liked);
+    // Stories Logic
+    function viewStory(url, name) {
+        const modal = document.getElementById('storyModal');
+        const content = document.getElementById('storyViewerContent');
+        const userName = document.getElementById('storyUserName');
+        const userAvatar = document.getElementById('storyUserAvatar');
+        
+        userName.innerText = name;
+        userAvatar.innerText = name[0].toUpperCase();
+        
+        if (url.endsWith('.mp4')) {
+            content.innerHTML = `<video src="/static/uploads/${url}" autoplay controls></video>`;
+        } else {
+            content.innerHTML = `<img src="/static/uploads/${url}">`;
+        }
+        
+        modal.style.display = 'flex';
+        // Auto close after 10s or when video ends
+        if (!url.endsWith('.mp4')) {
+            setTimeout(() => {
+                if (modal.style.display === 'flex') closeStory();
+            }, 10000);
+        }
+    }
+
+    function closeStory() {
+        const modal = document.getElementById('storyModal');
+        modal.style.display = 'none';
+        document.getElementById('storyViewerContent').innerHTML = '';
+    }
+
+    function togglePostDropdown(pid) {
+        const dropdown = document.getElementById(`dropdown-${pid}`);
+        const allDropdowns = document.querySelectorAll('.dropdown-content');
+        allDropdowns.forEach(d => {
+            if (d.id !== `dropdown-${pid}`) d.style.display = 'none';
+        });
+        dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // Close dropdowns when clicking outside
+    window.onclick = function(event) {
+        if (!event.target.matches('.fa-ellipsis')) {
+            document.querySelectorAll('.dropdown-content').forEach(d => d.style.display = 'none');
+        }
+    }
+
+    // Comment Logic (Using Event Delegation for Infinite Scroll support)
+    document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.comment-toggle-btn');
+        if (btn) {
+            const pid = btn.dataset.post;
+            const section = document.getElementById(`comment-sec-${pid}`);
+            const list = document.getElementById(`comment-list-${pid}`);
+            
+            if (section.style.display === 'none') {
+                const res = await fetch(`/api/comments/${pid}`);
+                const comments = await res.json();
+                
+                list.innerHTML = comments.map(c => `
+                    <div style="margin-bottom:8px; font-size:13px;">
+                        <strong>${c.username}</strong> ${c.comment_text}
+                    </div>
+                `).join('') || '<div style="color:var(--text-muted); font-size:12px;">Belum ada komentar.</div>';
+                
+                section.style.display = 'block';
+            } else {
+                section.style.display = 'none';
+            }
         }
     });
-});
+
+    async function postComment(e, pid) {
+        e.preventDefault();
+        const input = document.getElementById(`comment-input-${pid}`);
+        const text = input.value.trim();
+        if (!text) return;
+        
+        const formData = new FormData();
+        formData.append('komentar', text);
+        formData.append('_csrf_token', csrfToken);
+        
+        const res = await fetch(`/komentar/${pid}`, {
+            method: 'POST',
+            body: formData,
+            headers: { 'Accept': 'application/json' }
+        });
+        
+        if (res.ok) {
+            const data = await res.json();
+            const list = document.getElementById(`comment-list-${pid}`);
+            const newComment = document.createElement('div');
+            newComment.style.marginBottom = '8px';
+            newComment.style.fontSize = '13px';
+            newComment.innerHTML = `<strong>${data.username}</strong> ${data.text}`;
+            
+            if (list.querySelector('.color\\:var\\(--text-muted\\)')) list.innerHTML = '';
+            list.appendChild(newComment);
+            input.value = '';
+        }
+    }
+
+    // Like Logic (Event Delegation)
+    document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.like-btn');
+        if (btn) {
+            {% if not session.user_id %} window.location.href = '/login'; return; {% endif %}
+            const res = await fetch(`/like/${btn.dataset.post}`, { 
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                const card = btn.closest('.post-content');
+                card.querySelector('.count-val').innerText = data.count;
+                btn.classList.toggle('fa-solid', data.liked);
+                btn.classList.toggle('fa-regular', !data.liked);
+                btn.classList.toggle('liked', data.liked);
+            }
+        }
+    });
+
+    // Save Logic (Event Delegation)
+    document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.save-btn');
+        if (btn) {
+            {% if not session.user_id %} window.location.href = '/login'; return; {% endif %}
+            const res = await fetch(`/wishlist/toggle/${btn.dataset.post}`, { 
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                btn.classList.toggle('fa-solid', data.status === 'added');
+                btn.classList.toggle('fa-regular', data.status !== 'added');
+                showToast('Tersimpan', data.status === 'added' ? 'Postingan disimpan ke wishlist.' : 'Postingan dihapus dari wishlist.', 'info');
+            }
+        }
+    });
+
+    // Infinite Scroll logic
+    let offset = 10;
+    let loading = false;
+    let allLoaded = false;
+
+    window.onscroll = async () => {
+        if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 800 && !loading && !allLoaded) {
+            loading = true;
+            
+            const container = document.getElementById('postContainer');
+            const skeletons = [];
+            for (let i=0; i<2; i++) {
+                const sk = document.createElement('div');
+                sk.className = 'post-card skeleton';
+                sk.style.height = '450px';
+                sk.style.marginBottom = '32px';
+                container.appendChild(sk);
+                skeletons.push(sk);
+            }
+
+            const res = await fetch(`/api/posts?offset=${offset}&type=social&mode=social`);
+            const data = await res.json();
+            
+            skeletons.forEach(s => s.remove());
+
+            if (data.length > 0) {
+                data.forEach(p => {
+                    const article = document.createElement('article');
+                    article.className = 'post-card';
+                    const captionWithTags = p.caption.replace(/#([a-zA-Z0-9_]+)/g, '<a href="/explore?q=%23$1" style="color:var(--accent); text-decoration:none; font-weight:600;">#$1</a>');
+                    article.innerHTML = `
+                        <div class="post-header">
+                            <div class="avatar" style="width:34px; height:34px;">${p.username[0].toUpperCase()}</div>
+                            <div class="post-user-info">
+                                <strong>${p.username}</strong>
+                                <span>Baru saja</span>
+                            </div>
+                        </div>
+                        <div class="post-img-wrap">
+                            <img src="/static/uploads/${p.media_url}" loading="lazy">
+                        </div>
+                        <div class="post-content">
+                            <div class="post-interactions">
+                                <i class="fa-regular fa-heart like-btn" data-post="${p.uuid}"></i>
+                                <i class="fa-regular fa-comment comment-toggle-btn" data-post="${p.uuid}"></i>
+                                <i class="fa-regular fa-paper-plane"></i>
+                                <i class="fa-regular fa-bookmark" style="margin-left:auto;"></i>
+                            </div>
+                            <span class="post-likes-count"><span class="count-val">${p.like_count || 0}</span> suka</span>
+                            <p class="post-caption"><strong>${p.username}</strong> ${captionWithTags}</p>
+                            
+                            <div class="comment-section" id="comment-sec-${p.uuid}" style="display:none; margin-top:14px; border-top:1px solid var(--border); padding-top:10px;">
+                                <div class="comment-list" id="comment-list-${p.uuid}" style="max-height:200px; overflow-y:auto; margin-bottom:12px;"></div>
+                                {% if session.user_id %}
+                                <form onsubmit="postComment(event, '${p.uuid}')" style="display:flex; gap:8px;">
+                                    <input type="text" id="comment-input-${p.uuid}" class="form-input" placeholder="Tambah komentar..." style="flex:1; font-size:13px; padding:8px 12px;">
+                                    <button type="submit" class="btn btn-primary btn-sm">Kirim</button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(article);
+                });
+                offset += 10;
+            } else {
+                allLoaded = true;
+            }
+            loading = false;
+        }
+    };
 </script>
 {% endblock %}

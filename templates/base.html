@@ -11,10 +11,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
     <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <!-- Socket.IO -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         :root {
             --bg-primary: #0a0a0f;
+            --bg-body: #0a0a0f;
             --bg-secondary: #111118;
             --bg-card: #16161f;
             --bg-elevated: #1e1e2a;
@@ -40,6 +44,141 @@
             --font-display: 'Syne', sans-serif;
             --font-body: 'DM Sans', sans-serif;
             --nav-height: 64px;
+            --sidebar-width: 240px;
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #ffffff;
+            --bg-body: #f8f9fb;
+            --bg-secondary: #f0f2f5;
+            --bg-card: #ffffff;
+            --bg-elevated: #f0f2f5;
+            --border: rgba(0,0,0,0.08);
+            --border-hover: rgba(0,0,0,0.12);
+            --text-primary: #1c1e21;
+            --text-secondary: #65676b;
+            --text-muted: #8a8d91;
+            --shadow-card: 0 2px 12px rgba(0,0,0,0.08);
+            --shadow-elevated: 0 4px 20px rgba(0,0,0,0.12);
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            margin: 0;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* ── DESKTOP SIDEBAR ── */
+        .sidebar-left {
+            position: fixed;
+            top: 16px; bottom: 16px; left: 16px;
+            width: var(--sidebar-width);
+            background: rgba(16, 16, 24, 0.7);
+            backdrop-filter: blur(20px) saturate(1.8);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            z-index: 1001;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        }
+
+        .side-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .side-item i { font-size: 18px; width: 24px; text-align: center; opacity: 0.8; transition: transform 0.2s; }
+        .side-item:hover { 
+            background: rgba(255,255,255,0.05); 
+            color: var(--text-primary);
+            transform: translateX(4px);
+        }
+        .side-item:hover i { transform: scale(1.1); opacity: 1; }
+        .side-item.active { 
+            background: var(--accent-glow); 
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+        .side-item.active i { color: var(--accent-light); opacity: 1; }
+
+        .sidebar-section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px 4px;
+            margin-top: 12px;
+            font-size: 10px;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .sidebar-section-content { overflow: hidden; transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1); max-height: 500px; }
+        .sidebar-section-content.collapsed { max-height: 0; }
+
+        .main-layout {
+            display: flex;
+            margin-left: calc(var(--sidebar-width) + 32px);
+            min-height: 100vh;
+            transition: margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .main-layout.full { margin-left: 0; }
+
+        .sidebar-toggle-btn {
+            position: fixed;
+            left: calc(var(--sidebar-width) + 24px);
+            top: 40px;
+            width: 28px; height: 28px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            z-index: 1002;
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .sidebar-toggle-btn:hover { color: var(--accent-light); border-color: var(--accent); background: var(--bg-elevated); }
+        .sidebar-toggle-btn.collapsed { left: 20px; transform: rotate(180deg); }
+        .sidebar-left.collapsed { transform: translateX(calc(-100% - 40px)); }
+
+        .content-area {
+            flex: 1;
+            width: 100%;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+
+        @media (max-width: 1100px) {
+            .sidebar-left { width: 80px; }
+            .side-item span { display: none; }
+            .sidebar-left .nav-logo span { display: none; }
+            .main-layout { margin-left: 80px; }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar-left { display: none; }
+            .main-layout { margin-left: 0; padding-bottom: 80px; }
+            .content-area { padding: 20px 16px 100px; }
+            .navbar { display: flex; }
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -298,6 +437,30 @@
         .badge-danger   { background: rgba(255,85,114,0.12);   color: var(--red); }
         .badge-accent   { background: rgba(108,99,255,0.15);   color: var(--accent-light); }
 
+        /* ── VERIFIED BADGE ── */
+        .verified-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 14px; height: 14px;
+            background: #0095f6; /* Instagram Blue */
+            color: #fff;
+            border-radius: 50%;
+            font-size: 8px;
+            margin-left: 4px;
+            vertical-align: middle;
+        }
+
+        /* ── ONLINE STATUS ── */
+        .online-dot {
+            width: 8px; height: 8px;
+            background: var(--green);
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 8px var(--green-glow);
+            border: 1px solid var(--bg-card);
+        }
+
         /* ── STATUS REKBER ── */
         .status-badge {
             display: inline-flex; align-items: center; gap: 6px;
@@ -306,6 +469,8 @@
         }
         .status-menunggu_pembayaran { background: rgba(245,200,66,0.12); color: var(--yellow); }
         .status-dibayar       { background: rgba(108,99,255,0.15); color: var(--accent-light); }
+        .status-dikirim       { background: rgba(255,140,66,0.12);  color: var(--orange); }
+        .status-sampai        { background: rgba(34,211,160,0.15); color: var(--green); }
         .status-selesai       { background: rgba(34,211,160,0.12); color: var(--green); }
         .status-komplain      { background: rgba(255,85,114,0.12); color: var(--red); }
 
@@ -387,26 +552,315 @@
             letter-spacing: -0.3px;
         }
 
+        /* ── MOBILE BOTTOM NAV ── */
+        .mobile-nav {
+            display: none;
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            height: 64px;
+            background: rgba(16, 16, 24, 0.95);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border);
+            z-index: 1000;
+            justify-content: space-around;
+            align-items: center;
+            padding: 0 10px;
+        }
+
+        .mobile-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 10px;
+            font-weight: 600;
+            flex: 1;
+        }
+
+        .mobile-nav-item i { font-size: 20px; }
+        .mobile-nav-item.active { color: var(--accent-light); }
+
+        /* ── SKELETON LOADING ── */
+        .skeleton {
+            background: linear-gradient(90deg, var(--bg-elevated) 25%, var(--bg-card) 50%, var(--bg-elevated) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: var(--radius-sm);
+        }
+
+        .search-suggestions {
+            position: absolute;
+            top: 100%; left: 0; right: 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            margin-top: 8px;
+            box-shadow: var(--shadow-elevated);
+            z-index: 2000;
+            display: none;
+            overflow: hidden;
+        }
+        .suggestion-item {
+            padding: 12px 16px;
+            display: flex; align-items: center; gap: 12px;
+            color: var(--text-primary);
+            text-decoration: none;
+            transition: background 0.2s;
+            font-size: 14px;
+        }
+        .suggestion-item:hover { background: var(--bg-elevated); }
+        .suggestion-item i { color: var(--text-muted); width: 20px; text-align: center; }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* ── MODALS ── */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(8px);
+            z-index: 10000;
+        }
+
+        .modal-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            width: 90%;
+            max-width: 500px;
+            box-shadow: var(--shadow-xl);
+            animation: modalFadeUp 0.3s ease-out;
+        }
+
+        @keyframes modalFadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         /* ── RESPONSIVE ── */
         @media (max-width: 768px) {
-            .main-wrap { padding: 20px 16px; }
+            .main-wrap { padding: 20px 16px 100px; }
             .navbar { padding: 0 16px; }
-            .nav-btn span { display: none; }
+            .nav-inner-btns { display: none !important; }
+            .mobile-nav { display: flex; }
         }
     </style>
 
     {% block head %}{% endblock %}
+    <!-- Lottie -->
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+    <!-- PWA -->
+    <link rel="manifest" href="/static/manifest.json">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js');
+            });
+        }
+    </script>
+    <!-- Global Security Token -->
+    <script>const csrfToken = "{{ csrf_token() }}";</script>
 </head>
 <body>
 
-<!-- ── FLASH MESSAGES ── -->
+<!-- ── DESKTOP SIDEBAR ── -->
+<button class="sidebar-toggle-btn d-none-mobile" id="sidebarToggle" onclick="toggleSidebar()">
+    <i class="fa fa-chevron-left"></i>
+</button>
+
+<aside class="sidebar-left" id="sidebar">
+    <a href="/" class="nav-logo" style="margin-bottom: 32px; padding-left: 16px;">So<span>crow</span></a>
+    
+    <!-- SOSIAL MEDIA SECTION -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-header" onclick="toggleSection(this)">
+            <span>Sosial</span>
+            <i class="fa fa-chevron-down"></i>
+        </div>
+        <div class="sidebar-section-content">
+            <a href="/" class="side-item active"><i class="fa fa-home"></i> <span>Beranda</span></a>
+            <a href="/explore" class="side-item"><i class="fa fa-compass"></i> <span>Explore</span></a>
+            <a href="/dm" class="side-item"><i class="fa fa-comment-dots"></i> <span>Pesan</span></a>
+            <a href="/notifikasi" class="side-item"><i class="fa fa-bell"></i> <span>Notifikasi</span></a>
+        </div>
+    </div>
+    
+    <div class="divider" style="margin: 16px 0;"></div>
+
+    <!-- MARKETPLACE SECTION -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-header" onclick="toggleSection(this)">
+            <span>Marketplace</span>
+            <i class="fa fa-chevron-down"></i>
+        </div>
+        <div class="sidebar-section-content">
+            <a href="/store" class="side-item"><i class="fa fa-shopping-bag"></i> <span>Store</span></a>
+            <a href="/cart" class="side-item" style="position:relative;">
+                <i class="fa fa-cart-shopping"></i> <span>Keranjang</span>
+                {% if cart_count > 0 %}
+                <span id="cartBadge" style="position:absolute; left:28px; top:10px; background:var(--red); color:white; font-size:10px; font-weight:800; padding:2px 6px; border-radius:10px; border:2px solid var(--bg-primary);">{{ cart_count }}</span>
+                {% endif %}
+            </a>
+            <a href="/wishlist" class="side-item"><i class="fa fa-heart"></i> <span>Wishlist</span></a>
+            <a href="/dasbor" class="side-item"><i class="fa fa-shield-halved"></i> <span>Rekber</span></a>
+            <a href="/vouchers" class="side-item"><i class="fa fa-ticket"></i> <span>Voucher Toko</span></a>
+            <a href="/afiliasi" class="side-item"><i class="fa fa-handshake"></i> <span>Afiliasi</span></a>
+        </div>
+    </div>
+
+    <div class="divider" style="margin: 16px 0;"></div>
+
+    {% if session.email == admin_email %}
+    <div class="sidebar-section">
+        <div class="sidebar-section-header" onclick="toggleSection(this)">
+            <span>Administrator</span>
+            <i class="fa fa-chevron-down"></i>
+        </div>
+        <div class="sidebar-section-content">
+            <a href="/admin/dashboard" class="side-item" style="color:var(--yellow);"><i class="fa fa-gauge-high"></i> <span>Admin Dashboard</span></a>
+            <a href="/admin/reports" class="side-item" style="color:var(--red);"><i class="fa fa-flag"></i> <span>Laporan User</span></a>
+        </div>
+    </div>
+    <div class="divider" style="margin: 16px 0;"></div>
+    {% endif %}
+
+    <!-- PENGATURAN SECTION -->
+    <div class="sidebar-section">
+        <div class="sidebar-section-header" onclick="toggleSection(this)">
+            <span>Lainnya</span>
+            <i class="fa fa-chevron-down"></i>
+        </div>
+        <div class="sidebar-section-content">
+            <a href="/keamanan" class="side-item"><i class="fa fa-shield-halved"></i> <span>Keamanan</span></a>
+            <a href="/akun" class="side-item">
+                <div class="avatar" style="width:20px; height:20px; font-size:10px; display:inline-flex; margin-right:12px;">
+                    {% if user_avatar %}
+                    <img src="/static/uploads/{{ user_avatar }}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
+                    {% else %}
+                    {{ session.username[0].upper() if session.username else 'U' }}
+                    {% endif %}
+                </div>
+                <span>Profil</span>
+            </a>
+            
+            <button id="themeToggle" class="side-item" style="background:none; border:none; width:100%; cursor:pointer; text-align:left;">
+                <i class="fa fa-moon"></i> <span>Mode Gelap</span>
+            </button>
+        </div>
+    </div>
+
+    {% if session.user_id %}
+    <a href="/logout" class="side-item" style="color:var(--red); margin-top: 4px;"><i class="fa fa-right-from-bracket"></i> <span>Logout</span></a>
+    {% endif %}
+
+    <div style="margin-top: auto; display: flex; flex-direction: column; gap: 16px;">
+        {% if not session.user_id %}
+        <div style="padding: 0 8px; display: flex; flex-direction: column; gap: 8px;">
+            <a href="/login" class="btn btn-ghost btn-full" style="border-radius: 30px;">Login</a>
+            <a href="/daftar" class="btn btn-primary btn-full" style="border-radius: 30px;">Daftar</a>
+        </div>
+        {% endif %}
+        
+        <div style="display: flex; gap: 8px; padding-left: 16px; margin-bottom: 8px;">
+            <a href="/set_lang/id" style="font-size: 12px; color: {% if cur_lang=='id' %}var(--accent-light){% else %}var(--text-muted){% endif %}; text-decoration: none; font-weight: 700;">ID</a>
+            <span style="color: var(--border);">|</span>
+            <a href="/set_lang/en" style="font-size: 12px; color: {% if cur_lang=='en' %}var(--accent-light){% else %}var(--text-muted){% endif %}; text-decoration: none; font-weight: 700;">EN</a>
+            
+            <span style="color: var(--border); margin: 0 4px;">|</span>
+            <button id="dataSaverToggle" style="background:none; border:none; color: {% if session.get('data_saver') %}var(--green){% else %}var(--text-muted){% endif %}; cursor:pointer; font-size:12px; font-weight:700;" title="Hemat Data">
+                <i class="fa fa-leaf"></i> Data Saver
+            </button>
+        </div>
+        {% if session.user_id %}
+        <a href="/tambah" class="btn btn-primary btn-full" style="border-radius: 30px;"><i class="fa fa-plus"></i> <span>Post</span></a>
+        {% endif %}
+    </div>
+</aside>
+
+<!-- ── MOBILE NAVBAR ── -->
+<nav class="navbar" style="display: none;">
+    <div class="navbar-inner">
+        <a href="/" class="nav-logo">So<span>crow</span></a>
+    </div>
+</nav>
+
+<!-- ── MAIN LAYOUT ── -->
+<div class="main-layout">
+    <div class="content-area">
+        {% block content %}{% endblock %}
+    </div>
+</div>
+
+<!-- ── LINK WARNING MODAL ── -->
+<div id="linkWarningModal" class="modal-overlay" style="display: none; z-index: 11000;">
+    <div class="modal-card" style="max-width: 400px; text-align: center; padding: 32px;">
+        <i class="fa fa-triangle-exclamation fa-3x" style="color: var(--orange); margin-bottom: 16px;"></i>
+        <h3 style="margin-bottom: 12px;">Peringatan Keamanan</h3>
+        <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 24px;">
+            Kamu akan meninggalkan <strong>Socrow</strong> dan menuju link eksternal. Jangan pernah berikan <strong>Password</strong> atau <strong>Kode OTP</strong> kepada siapapun di luar sistem kami.
+            <br><br><span id="targetUrl" style="font-weight: 700; color: var(--accent); word-break: break-all;"></span>
+        </p>
+        <div style="display: flex; gap: 12px;">
+            <button class="btn btn-ghost btn-full" onclick="closeLinkWarning()">Batal</button>
+            <a id="continueLink" href="#" class="btn btn-danger btn-full" onclick="closeLinkWarning()">Lanjutkan</a>
+        </div>
+    </div>
+</div>
+<!-- ── REPORT MODAL ── -->
+<div id="reportModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:9999; align-items:center; justify-content:center; padding:20px;">
+    <div class="card" style="max-width:400px; width:100%; padding:24px;">
+        <h3 style="margin-bottom:16px;">Laporkan Konten/Pengguna</h3>
+        <form action="/report" method="POST">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="target_type" id="reportTargetType">
+            <input type="hidden" name="target_id" id="reportTargetId">
+            <div class="form-group" style="margin-bottom:16px;">
+                <label class="form-label">Alasan Laporan</label>
+                <select name="reason" class="form-input" required>
+                    <option value="">Pilih alasan...</option>
+                    <option value="Penipuan">Penipuan / Scam</option>
+                    <option value="Spam">Spam</option>
+                    <option value="Konten Tidak Pantas">Konten Tidak Pantas</option>
+                    <option value="Pelecehan">Pelecehan / Harassment</option>
+                    <option value="Lainnya">Lainnya</option>
+                </select>
+            </div>
+            <div style="display:flex; gap:12px;">
+                <button type="button" onclick="closeReportModal()" class="btn btn-ghost btn-full">Batal</button>
+                <button type="submit" class="btn btn-danger btn-full">Kirim Laporan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openReportModal(type, id) {
+        document.getElementById('reportTargetType').value = type;
+        document.getElementById('reportTargetId').value = id;
+        document.getElementById('reportModal').style.display = 'flex';
+    }
+    function closeReportModal() {
+        document.getElementById('reportModal').style.display = 'none';
+    }
+</script>
+
 {% with messages = get_flashed_messages(with_categories=true) %}
 {% if messages %}
 <div class="flash-container" id="flashContainer">
     {% for category, message in messages %}
     <div class="flash-msg flash-{{ category }}" onclick="this.remove()">
-        {% if category == 'success' %}<i class="fa fa-check-circle"></i>
-        {% elif category == 'danger' %}<i class="fa fa-exclamation-circle"></i>
+        {% if category == 'success' %}
+            <lottie-player src="https://assets3.lottiefiles.com/packages/lf20_atlup8m3.json" background="transparent" speed="1" style="width: 24px; height: 24px;" autoplay></lottie-player>
+        {% elif category == 'danger' %}
+            <lottie-player src="https://assets1.lottiefiles.com/packages/lf20_hp86txsq.json" background="transparent" speed="1" style="width: 24px; height: 24px;" autoplay></lottie-player>
         {% elif category == 'warning' %}<i class="fa fa-triangle-exclamation"></i>
         {% else %}<i class="fa fa-info-circle"></i>{% endif %}
         {{ message }}
@@ -416,37 +870,27 @@
 {% endif %}
 {% endwith %}
 
-<!-- ── NAVBAR ── -->
-<nav class="navbar">
-    <div class="navbar-inner">
-        <a href="/" class="nav-logo">So<span>crow</span></a>
-
-        {% if session.user_id %}
-            <a href="/" class="nav-btn"><i class="fa fa-house"></i> <span>Beranda</span></a>
-            <a href="/tambah" class="nav-btn"><i class="fa fa-plus-circle"></i> <span>Post</span></a>
-            <a href="/dasbor" class="nav-btn"><i class="fa fa-shield-halved"></i> <span>Rekber</span></a>
-            <a href="/afiliasi" class="nav-btn"><i class="fa fa-handshake"></i> <span>Afiliasi</span></a>
-            <a href="/withdraw" class="nav-btn"><i class="fa fa-wallet"></i> <span>Tarik</span></a>
-            <a href="/notifikasi" class="nav-btn" style="position:relative">
-                <i class="fa fa-bell"></i>
-                {% set nc = get_notif_count() %}
-                {% if nc > 0 %}<span class="notif-badge">{{ nc }}</span>{% endif %}
-            </a>
-            <a href="/akun" class="nav-btn nav-btn-primary"><i class="fa fa-user"></i> <span>{{ session.username }}</span></a>
-            {% if session.email == admin_email %}
-            <a href="/admin/kyc" class="nav-btn" style="color:var(--red);" title="Panel Admin"><i class="fa fa-crown"></i></a>
-            {% endif %}
-        {% else %}
-            <a href="/login" class="nav-btn">Masuk</a>
-            <a href="/daftar" class="nav-btn nav-btn-primary">Daftar Gratis</a>
+<!-- ── MOBILE NAV ── -->
+{% if session.user_id %}
+<div class="mobile-nav">
+    <a href="/" class="mobile-nav-item"><i class="fa fa-house"></i><span>Home</span></a>
+    <a href="/store" class="mobile-nav-item"><i class="fa fa-bag-shopping"></i><span>Store</span></a>
+    <a href="/cart" class="mobile-nav-item" style="position:relative;">
+        <i class="fa fa-cart-shopping"></i><span>Cart</span>
+        {% if cart_count > 0 %}
+        <span style="position:absolute; right:8px; top:4px; background:var(--red); color:white; font-size:9px; font-weight:800; padding:1px 4px; border-radius:10px; border:1px solid var(--bg-primary);">{{ cart_count }}</span>
         {% endif %}
-    </div>
-</nav>
-
-<!-- ── CONTENT ── -->
-<div class="main-wrap">
-    {% block content %}{% endblock %}
+    </a>
+    <a href="/tambah" class="mobile-nav-item" style="color:var(--accent-light)"><i class="fa fa-circle-plus" style="font-size:32px;"></i></a>
+    <a href="/dm" class="mobile-nav-item"><i class="fa fa-comment-dots"></i><span>Pesan</span></a>
+    <a href="/keamanan" class="mobile-nav-item"><i class="fa fa-shield-halved"></i><span>Safe</span></a>
+    <a href="/akun" class="mobile-nav-item"><i class="fa fa-user"></i><span>Profil</span></a>
+    <a href="/logout" class="mobile-nav-item" style="color:var(--red)"><i class="fa fa-right-from-bracket"></i><span>Out</span></a>
 </div>
+{% endif %}
+
+<!-- ── TOAST NOTIFICATIONS ── -->
+<div id="toastContainer" style="position:fixed; bottom:80px; right:24px; z-index:10000; display:flex; flex-direction:column; gap:10px;"></div>
 
 <!-- ── FOOTER ── -->
 <footer style="border-top:1px solid var(--border); margin-top:60px; padding:32px 24px; text-align:center; color:var(--text-muted); font-size:13px; position:relative; z-index:1;">
@@ -460,11 +904,191 @@
 </footer>
 
 <script>
+    // Theme Toggle Logic
+    const themeToggle = document.getElementById('themeToggle');
+    const html = document.documentElement;
+    
+    // Check saved theme or system preference
+    const savedTheme = localStorage.getItem('theme');
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
+        html.setAttribute('data-theme', 'dark');
+        updateThemeUI('dark');
+    } else {
+        html.setAttribute('data-theme', 'light');
+        updateThemeUI('light');
+    }
+
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            const isDark = html.getAttribute('data-theme') === 'dark';
+            const newTheme = isDark ? 'light' : 'dark';
+            
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeUI(newTheme);
+        });
+    }
+
+    function updateThemeUI(theme) {
+        if (!themeToggle) return;
+        const icon = themeToggle.querySelector('i');
+        const text = themeToggle.querySelector('span');
+        if (theme === 'dark') {
+            icon.className = 'fa fa-sun';
+            text.innerText = 'Mode Terang';
+        } else {
+            icon.className = 'fa fa-moon';
+            text.innerText = 'Mode Gelap';
+        }
+    }
+
+    // Safe Link Logic
+    document.addEventListener('click', (e) => {
+        const link = e.target.closest('a');
+        if (link && link.href && link.href.startsWith('http')) {
+            const url = new URL(link.href);
+            if (url.hostname !== window.location.hostname && !link.getAttribute('data-safe')) {
+                e.preventDefault();
+                const modal = document.getElementById('linkWarningModal');
+                const target = document.getElementById('targetUrl');
+                const continueBtn = document.getElementById('continueLink');
+                
+                target.innerText = link.href;
+                continueBtn.href = link.href;
+                continueBtn.target = '_blank';
+                modal.style.display = 'flex';
+            }
+        }
+    });
+
+    function closeLinkWarning() {
+        document.getElementById('linkWarningModal').style.display = 'none';
+    }
+
     // Auto-remove flash messages
     setTimeout(() => {
         const fc = document.getElementById('flashContainer');
         if (fc) fc.remove();
     }, 5000);
+
+    // Global Socket.IO Connection
+    const socket = io();
+
+    socket.on('connect', () => {
+        const userId = "{{ session.user_id }}";
+        if (userId) socket.emit('join', { user_id: userId });
+    });
+
+    socket.on('notification', (data) => {
+        const fc = document.getElementById('flashContainer') || createFlashContainer();
+        const msg = document.createElement('div');
+        msg.className = `flash-msg flash-${data.type}`;
+        msg.innerHTML = `<i class="fa fa-bell"></i> <div><strong>${data.title}</strong><br>${data.message}</div>`;
+        msg.onclick = () => window.location.href = data.link;
+        fc.appendChild(msg);
+
+        // Update badge if exists
+        const badge = document.querySelector('.notif-badge');
+        if (badge) {
+            badge.innerText = parseInt(badge.innerText || 0) + 1;
+        } else {
+            const bell = document.querySelector('.fa-bell');
+            if (bell) {
+                const newBadge = document.createElement('span');
+                newBadge.className = 'notif-badge';
+                newBadge.innerText = '1';
+                bell.parentNode.appendChild(newBadge);
+            }
+        }
+
+        setTimeout(() => msg.remove(), 8000);
+    });
+
+    function createFlashContainer() {
+        const div = document.createElement('div');
+        div.id = 'flashContainer';
+        div.className = 'flash-container';
+        document.body.appendChild(div);
+        return div;
+    }
+
+    function showToast(title, msg, type='info') {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = `flash-msg flash-${type}`;
+        toast.style.animation = 'slideIn 0.3s ease forwards';
+        toast.innerHTML = `<i class="fa fa-info-circle"></i> <div><strong>${title}</strong><br>${msg}</div>`;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.style.animation = 'fadeOut 0.3s ease forwards';
+            setTimeout(() => toast.remove(), 300);
+        }, 4000);
+    }
+
+    // Data Saver Toggle
+    const dsToggle = document.getElementById('dataSaverToggle');
+    if (dsToggle) {
+        dsToggle.addEventListener('click', async () => {
+            const res = await fetch('/toggle_data_saver', { 
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.data_saver) {
+                    dsToggle.style.color = 'var(--green)';
+                    showToast('Data Saver', 'Mode Hemat Data diaktifkan!', 'success');
+                } else {
+                    dsToggle.style.color = 'var(--text-muted)';
+                    showToast('Data Saver', 'Mode Hemat Data dinonaktifkan.', 'info');
+                }
+            }
+        });
+    }
+
+    // Sidebar Minimize/Hide Logic
+    function toggleSection(header) {
+        const content = header.nextElementSibling;
+        header.classList.toggle('collapsed');
+        content.classList.toggle('collapsed');
+        
+        // Save state
+        const sectionName = header.querySelector('span').innerText;
+        const isCollapsed = header.classList.contains('collapsed');
+        localStorage.setItem(`sidebar_section_${sectionName}`, isCollapsed);
+    }
+
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const main = document.querySelector('.main-layout');
+        const toggleBtn = document.getElementById('sidebarToggle');
+        
+        sidebar.classList.toggle('collapsed');
+        main.classList.toggle('full');
+        toggleBtn.classList.toggle('collapsed');
+        
+        localStorage.setItem('sidebar_hidden', sidebar.classList.contains('collapsed'));
+    }
+
+    // Restore Sidebar States
+    document.addEventListener('DOMContentLoaded', () => {
+        // Restore sections
+        document.querySelectorAll('.sidebar-section-header').forEach(header => {
+            const sectionName = header.querySelector('span').innerText;
+            const savedState = localStorage.getItem(`sidebar_section_${sectionName}`);
+            if (savedState === 'true') {
+                header.classList.add('collapsed');
+                header.nextElementSibling.classList.add('collapsed');
+            }
+        });
+
+        // Restore sidebar
+        if (localStorage.getItem('sidebar_hidden') === 'true') {
+            toggleSidebar();
+        }
+    });
 </script>
 
 {% block scripts %}{% endblock %}

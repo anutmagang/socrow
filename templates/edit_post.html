@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Edit Post — Socrow{% endblock %}
+
+{% block content %}
+<div class="main-wrap">
+    <div style="max-width: 600px; margin: 0 auto;">
+        <h1 style="font-family: var(--font-display); margin-bottom: 24px;">✏️ Edit Postingan</h1>
+        
+        <div class="card" style="padding: 24px;">
+            <div style="margin-bottom: 20px;">
+                {% if p.media_url %}
+                {% if p.post_type == 'video' %}
+                <video src="/static/uploads/{{ p.media_url }}" style="width: 100%; border-radius: 12px; max-height: 300px; object-fit: cover;" muted></video>
+                {% else %}
+                <img src="/static/uploads/{{ p.media_url }}" style="width: 100%; border-radius: 12px; max-height: 300px; object-fit: cover;">
+                {% endif %}
+                {% endif %}
+            </div>
+
+            <form method="POST">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                
+                <div class="form-group">
+                    <label class="form-label">Caption</label>
+                    <textarea name="caption" class="form-input" rows="4" maxlength="1000">{{ p.caption }}</textarea>
+                </div>
+
+                {% if p.is_for_sale %}
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
+                    <div class="form-group">
+                        <label class="form-label">Harga (Rp)</label>
+                        <input type="number" name="price" class="form-input" value="{{ p.price | int }}" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Stok</label>
+                        <input type="number" name="stock" class="form-input" value="{{ p.stock }}" min="0">
+                    </div>
+                </div>
+                {% endif %}
+
+                <div style="margin-top: 24px; display: flex; gap: 12px;">
+                    <button type="submit" class="btn btn-primary btn-full">
+                        <i class="fa fa-save"></i> Simpan Perubahan
+                    </button>
+                    <a href="/user/{{ session.username }}" class="btn btn-ghost btn-full">Batal</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

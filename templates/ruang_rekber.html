@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Ruang Rekber #{{ room.id }} — Socrow{% endblock %}
+{% block title %}Ruang Rekber #{{ room.uuid[:8] }} — Socrow{% endblock %}
 
 {% block head %}
 <style>
@@ -181,10 +181,33 @@
 {% endblock %}
 
 {% block content %}
+<!-- PROGRESS TIMELINE -->
+<div class="card" style="padding: 24px; margin-bottom: 24px; border-radius: var(--radius-xl);">
+    <div style="display: flex; justify-content: space-between; position: relative;">
+        {% set steps = [('menunggu_pembayaran','Bayar'), ('dibayar','Diproses'), ('dikirim','Dikirim'), ('sampai','Sampai'), ('selesai','Selesai')] %}
+        {% set current_idx = 0 %}
+        {% for s, label in steps %}{% if room.status == s %}{% set current_idx = loop.index0 %}{% endif %}{% endfor %}
+        {% if room.status == 'selesai' %}{% set current_idx = 4 %}{% endif %}
+
+        <div style="position: absolute; top: 14px; left: 10%; right: 10%; height: 2px; background: var(--border); z-index: 0;">
+            <div style="width: {{ (current_idx / 4) * 100 }}%; height: 100%; background: var(--accent); transition: width 0.5s;"></div>
+        </div>
+
+        {% for s, label in steps %}
+        <div style="z-index: 1; text-align: center; width: 60px;">
+            <div style="width: 30px; height: 30px; border-radius: 50%; background: {% if loop.index0 <= current_idx %}var(--accent){% else %}var(--bg-elevated){% endif %}; color: #fff; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; border: 2px solid {% if loop.index0 <= current_idx %}var(--accent){% else %}var(--border){% endif %}; font-size: 12px;">
+                {% if loop.index0 < current_idx %}<i class="fa fa-check"></i>{% else %}{{ loop.index }}{% endif %}
+            </div>
+            <span style="font-size: 10px; font-weight: 700; color: {% if loop.index0 <= current_idx %}var(--text-primary){% else %}var(--text-muted){% endif %};">{{ label }}</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
 <div style="margin-bottom:20px; display:flex; align-items:center; gap:12px;">
     <a href="/dasbor" class="btn btn-ghost btn-sm"><i class="fa fa-arrow-left"></i> Kembali</a>
     <span class="status-badge status-{{ room.status }}">{{ room.status | replace('_',' ') | title }}</span>
-    <span style="color:var(--text-muted); font-size:14px; margin-left:auto;">Ruang #{{ room.id }}</span>
+    <span style="color:var(--text-muted); font-size:14px; margin-left:auto;">Ruang #{{ room.uuid[:8] }}</span>
 </div>
 
 <div class="room-wrap">
@@ -222,15 +245,18 @@
                 {% endfor %}
 
                 {% if not pesan %}
-                <div style="text-align:center; color:var(--text-muted); padding:40px; font-size:14px;">
+                <div id="noMessages" style="text-align:center; color:var(--text-muted); padding:40px; font-size:14px;">
                     <i class="fa fa-comments" style="font-size:32px; display:block; margin-bottom:12px; opacity:0.3;"></i>
                     Belum ada pesan. Mulai komunikasi dengan pihak lain.
                 </div>
                 {% endif %}
             </div>
 
+            <div id="typingIndicator" style="padding: 4px 16px; font-size: 11px; color: var(--text-muted); height: 20px; font-style: italic;"></div>
+
             {% if room.status not in ['selesai', 'komplain'] %}
-            <form method="POST" action="/kirim_pesan/{{ room.id }}" class="chat-input-wrap">
+            <form method="POST" action="/kirim_pesan/{{ room.uuid }}" class="chat-input-wrap">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <input type="text" name="teks_pesan" class="form-input"
                        placeholder="Ketik pesan..." autocomplete="off" required maxlength="1000">
                 <button type="submit" class="send-btn"><i class="fa fa-paper-plane"></i></button>
@@ -276,28 +302,72 @@
         </div>
 
         <!-- ACTION BUTTONS -->
-        {% if room.status == 'dibayar' %}
+        {% if room.status == 'selesai' %}
+        <div class="info-card" style="border-color:var(--accent);">
+            <div class="info-card-header" style="background:rgba(108,99,255,0.05);">
+                <h3 style="color:var(--accent);"><i class="fa fa-file-invoice"></i> Dokumen</h3>
+            </div>
+            <div class="action-panel">
+                <a href="/invoice/{{ room.uuid }}" class="btn btn-primary btn-full"><i class="fa fa-download"></i> Download Invoice</a>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if room.status == 'sampai' %}
+        <div class="info-card" style="border-color:var(--green);">
+            <div class="info-card-header" style="background:rgba(34,211,160,0.05);">
+                <h3 style="color:var(--green);"><i class="fa fa-clock"></i> Auto-Release</h3>
+            </div>
+            <div class="action-panel" style="text-align:center;">
+                <p style="font-size:13px; color:var(--text-secondary); margin-bottom:8px;">Dana akan diteruskan ke penjual otomatis dalam:</p>
+                <div id="countdown" style="font-family:var(--font-display); font-size:24px; font-weight:800; color:var(--text-primary);">24:00:00</div>
+                <p style="font-size:11px; color:var(--text-muted); margin-top:8px;">Segera cek barang dan ajukan komplain jika ada masalah.</p>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if room.status == 'dibayar' or room.status == 'dikirim' or room.status == 'sampai' %}
         <div class="info-card">
             <div class="info-card-header">
                 <h3>⚡ Aksi</h3>
             </div>
             <div class="action-panel">
                 {% if user_id == room.buyer_id %}
-                <form method="POST" action="/aksi_rekber/{{ room.id }}/barang_diterima">
+                <form method="POST" action="/aksi_rekber/{{ room.uuid }}/barang_diterima">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-success btn-full"
                         onclick="return confirm('Konfirmasi kamu sudah menerima barang? Dana akan langsung dikirim ke penjual.')">
                         <i class="fa fa-check-circle"></i> Barang Sudah Diterima
                     </button>
                 </form>
-                <form method="POST" action="/aksi_rekber/{{ room.id }}/komplain">
-                    <button type="submit" class="btn btn-danger btn-full"
-                        onclick="return confirm('Ajukan komplain? Admin akan meninjau dalam 1x24 jam.')">
-                        <i class="fa fa-triangle-exclamation"></i> Ajukan Komplain
-                    </button>
-                </form>
-                <p style="font-size:12px; color:var(--text-muted); text-align:center; line-height:1.5;">
+                <a href="/dispute/{{ room.uuid }}" class="btn btn-danger btn-full" style="margin-top:10px;">
+                    <i class="fa fa-triangle-exclamation"></i> Ajukan Komplain
+                </a>
+                <p style="font-size:12px; color:var(--text-muted); text-align:center; line-height:1.5; margin-top:10px;">
                     Klik "Barang Diterima" hanya jika barang sudah benar-benar kamu terima dalam kondisi baik.
                 </p>
+                {% elif user_id == room.seller_id %}
+                {% if room.status == 'dibayar' %}
+                <form method="POST" action="/aksi_rekber/{{ room.uuid }}/input_resi" class="settings-form">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-group">
+                        <label class="form-label">Kurir</label>
+                        <input type="text" name="courier_name" class="form-input" placeholder="JNE / J&T / Sicepat" required>
+                    </div>
+                    <div class="form-group" style="margin-top:10px;">
+                        <label class="form-label">Nomor Resi</label>
+                        <input type="text" name="resi_number" class="form-input" placeholder="Masukkan No. Resi" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full" style="margin-top:14px;">
+                        <i class="fa fa-truck-fast"></i> Input Resi & Kirim
+                    </button>
+                </form>
+                {% else %}
+                <div style="text-align:center; padding:8px; font-size:14px; color:var(--text-muted);">
+                    <i class="fa fa-truck" style="display:block; font-size:28px; margin-bottom:10px; opacity:0.4;"></i>
+                    Barang sedang dalam perjalanan ke pembeli.
+                </div>
+                {% endif %}
                 {% else %}
                 <div style="text-align:center; padding:8px; font-size:14px; color:var(--text-muted);">
                     <i class="fa fa-clock" style="display:block; font-size:28px; margin-bottom:10px; opacity:0.4;"></i>
@@ -335,16 +405,105 @@
 
 {% block scripts %}
 <script>
-    // Auto scroll ke bawah
+    const roomId = "{{ room.uuid }}";
+    const myId = "{{ user_id }}";
     const chatBox = document.getElementById('chatBox');
+    const noMessages = document.getElementById('noMessages');
+    const typingIndicator = document.getElementById('typingIndicator');
+    const chatInput = document.querySelector('.chat-input-wrap input');
+
+    // Auto scroll ke bawah
     if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
 
-    // Enter to send
-    document.querySelector('.chat-input-wrap input')?.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            this.closest('form').submit();
+    // Join room khusus
+    socket.emit('join', { room_id: roomId });
+
+    // Terima pesan baru
+    socket.on('new_message', (data) => {
+        if (noMessages) noMessages.style.display = 'none';
+
+        let bubbleClass = 'other';
+        let metaText = `${data.sender_name} · ${data.created_at}`;
+
+        if (data.sender_id == 0) {
+            bubbleClass = 'system';
+            metaText = data.created_at;
+        } else if (data.sender_id == myId) {
+            bubbleClass = 'me';
+            metaText = `Kamu · ${data.created_at}`;
         }
+
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `msg-bubble ${bubbleClass}`;
+        msgDiv.innerHTML = `
+            <div class="msg-inner">${data.message_text}</div>
+            <div class="msg-meta">${metaText}</div>
+        `;
+        chatBox.appendChild(msgDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
     });
+
+    // Indikator Mengetik
+    let typingTimeout;
+    chatInput?.addEventListener('input', () => {
+        socket.emit('typing', { room_id: roomId });
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => {
+            socket.emit('stop_typing', { room_id: roomId });
+        }, 3000);
+    });
+
+    socket.on('is_typing', (data) => {
+        typingIndicator.innerText = `${data.username} sedang mengetik...`;
+    });
+
+    socket.on('not_typing', (data) => {
+        typingIndicator.innerText = '';
+    });
+
+    // Ajax send to prevent refresh (Optional, let's keep it robust)
+    const chatForm = document.querySelector('.chat-input-wrap');
+    if (chatForm) {
+        chatForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const input = this.querySelector('input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const formData = new FormData(this);
+            fetch(this.action, {
+                method: 'POST',
+                body: formData
+            });
+
+            input.value = '';
+            socket.emit('stop_typing', { room_id: roomId });
+        });
+    }
+    // Auto-Release Countdown
+    {% if room.status == 'sampai' %}
+    function startCountdown() {
+        const updatedAt = new Date("{{ room.updated_at }} UTC").getTime();
+        const releaseTime = updatedAt + (1 * 60 * 60 * 1000); // 1 jam simulation
+        const countdownEl = document.getElementById('countdown');
+
+        const timer = setInterval(() => {
+            const now = new Date().getTime();
+            const diff = releaseTime - now;
+
+            if (diff <= 0) {
+                clearInterval(timer);
+                countdownEl.innerText = "Processing...";
+                window.location.reload();
+            } else {
+                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+                countdownEl.innerText = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }
+        }, 1000);
+    }
+    startCountdown();
+    {% endif %}
 </script>
 {% endblock %}

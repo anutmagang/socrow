@@ -57,6 +57,7 @@
       </div>
       {% else %}
       <form method="POST" id="wdForm">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <div style="margin-bottom:18px;">
           <label class="form-label">Sumber Dana</label>
           <div class="source-toggle">

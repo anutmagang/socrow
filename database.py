@@ -1,68 +1,57 @@
 import sqlite3
+import os
 
-def init_db():
-    conn = sqlite3.connect('sosmed_rekber.db')
+def init_db(force=False):
+    db_path = 'sosmed_rekber.db'
+    if force and os.path.exists(db_path):
+        os.remove(db_path)
+        print("Database lama dihapus.")
+
+    conn = sqlite3.connect(db_path)
     c = conn.cursor()
 
-    tables = [
-        'users', 'posts', 'post_images', 'comments', 'likes',
-        'rekber_rooms', 'messages', 'message_files',
-        'notifications', 'platform_stats',
-        'withdrawals', 'disputes', 'dispute_evidence',
-        'ratings', 'affiliates', 'affiliate_logs',
-        'shipment_tracking', 'blacklist', 'audit_logs'
-    ]
-    for t in tables:
-        c.execute(f'DROP TABLE IF EXISTS {t}')
-
-    c.execute('''CREATE TABLE platform_stats (
-        id INTEGER PRIMARY KEY,
-        total_revenue REAL DEFAULT 0.0,
-        total_transactions INTEGER DEFAULT 0,
-        total_users INTEGER DEFAULT 0,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )''')
-    c.execute("INSERT INTO platform_stats VALUES (1, 0.0, 0, 0, CURRENT_TIMESTAMP)")
-
-    c.execute('''CREATE TABLE users (
+    c.execute('''CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uuid TEXT UNIQUE NOT NULL,
         username TEXT UNIQUE NOT NULL,
         email TEXT UNIQUE NOT NULL,
         phone TEXT,
         password TEXT NOT NULL,
-        saldo REAL DEFAULT 0.0,
-        saldo_afiliasi REAL DEFAULT 0.0,
-        account_type TEXT DEFAULT 'individu',
+        bio TEXT,
+        avatar_url TEXT,
+        cover_url TEXT,
+        website TEXT,
+        kyc_status TEXT DEFAULT 'none', -- none, pending, verified
         kyc_name TEXT,
-        store_name TEXT,
         bank_name TEXT,
         bank_account TEXT,
-        kyc_status TEXT DEFAULT 'none',
-        file_ktp TEXT,
-        file_selfie TEXT,
+        saldo REAL DEFAULT 0,
+        saldo_afiliasi REAL DEFAULT 0,
         total_sales INTEGER DEFAULT 0,
-        rating_avg REAL DEFAULT 0.0,
-        rating_count INTEGER DEFAULT 0,
-        is_active INTEGER DEFAULT 1,
-        is_banned INTEGER DEFAULT 0,
-        ban_reason TEXT,
         referral_code TEXT UNIQUE,
         referred_by INTEGER,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(referred_by) REFERENCES users(id)
+        last_seen TIMESTAMP,
+        is_active INTEGER DEFAULT 1,
+        is_banned INTEGER DEFAULT 0,
+        otp_code TEXT,
+        otp_expiry TIMESTAMP,
+        rating_avg REAL DEFAULT 0,
+        rating_count INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
 
-    c.execute('''CREATE TABLE posts (
+    c.execute('''CREATE TABLE IF NOT EXISTS posts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uuid TEXT UNIQUE NOT NULL,
         user_id INTEGER NOT NULL,
-        post_type TEXT DEFAULT 'text',
-        product_category TEXT DEFAULT 'umum',
-        product_kind TEXT DEFAULT 'fisik',
-        media_url TEXT DEFAULT '',
-        caption TEXT NOT NULL,
+        post_type TEXT DEFAULT 'image', -- text, image, video
+        product_category TEXT, -- elektronik, fashion, dll
+        product_kind TEXT, -- fisik, digital
+        media_url TEXT,
+        caption TEXT,
         is_for_sale INTEGER DEFAULT 0,
         price REAL DEFAULT 0,
-        stock INTEGER DEFAULT 0,
+        stock INTEGER DEFAULT 1,
         weight_gram INTEGER DEFAULT 0,
         digital_file TEXT,
         is_active INTEGER DEFAULT 1,
@@ -70,204 +59,281 @@ def init_db():
         FOREIGN KEY(user_id) REFERENCES users(id)
     )''')
 
-    c.execute('''CREATE TABLE post_images (
+    c.execute('''CREATE TABLE IF NOT EXISTS post_images (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         post_id INTEGER NOT NULL,
         image_url TEXT NOT NULL,
-        sort_order INTEGER DEFAULT 0,
         FOREIGN KEY(post_id) REFERENCES posts(id)
     )''')
 
-    c.execute('''CREATE TABLE rekber_rooms (
+    c.execute('''CREATE TABLE IF NOT EXISTS rekber_rooms (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        post_id INTEGER NOT NULL,
+        uuid TEXT UNIQUE NOT NULL,
+        xendit_id TEXT UNIQUE,
+        affiliate_code TEXT,
         buyer_id INTEGER NOT NULL,
         seller_id INTEGER NOT NULL,
-        status TEXT DEFAULT 'menunggu_pembayaran',
+        post_id INTEGER NOT NULL,
         price_deal REAL NOT NULL,
-        xendit_id TEXT UNIQUE,
+        status TEXT DEFAULT 'menunggu_pembayaran', -- menunggu_pembayaran, dibayar, dikirim, sampai, komplain, selesai
         payment_method TEXT,
         resi_number TEXT,
         courier_name TEXT,
-        auto_release_at TIMESTAMP,
-        affiliate_code TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(post_id) REFERENCES posts(id),
         FOREIGN KEY(buyer_id) REFERENCES users(id),
-        FOREIGN KEY(seller_id) REFERENCES users(id)
+        FOREIGN KEY(seller_id) REFERENCES users(id),
+        FOREIGN KEY(post_id) REFERENCES posts(id)
     )''')
 
-    c.execute('''CREATE TABLE messages (
+    c.execute('''CREATE TABLE IF NOT EXISTS chat_rooms (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uuid TEXT UNIQUE NOT NULL,
+        user1_id INTEGER NOT NULL,
+        user2_id INTEGER NOT NULL,
+        last_message TEXT,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user1_id) REFERENCES users(id),
+        FOREIGN KEY(user2_id) REFERENCES users(id)
+    )''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS chat_messages (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         room_id INTEGER NOT NULL,
-        sender_id INTEGER,
-        message_text TEXT NOT NULL,
-        message_type TEXT DEFAULT 'text',
+        sender_id INTEGER NOT NULL,
+        message_text TEXT,
         file_url TEXT,
+        message_type TEXT DEFAULT 'text',
         is_read INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(room_id) REFERENCES rekber_rooms(id)
+        FOREIGN KEY(room_id) REFERENCES chat_rooms(id),
+        FOREIGN KEY(sender_id) REFERENCES users(id)
     )''')
 
-    c.execute('''CREATE TABLE notifications (
+    c.execute('''CREATE TABLE IF NOT EXISTS likes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
-        title TEXT NOT NULL,
-        message TEXT NOT NULL,
-        notif_type TEXT DEFAULT 'info',
+        post_id INTEGER NOT NULL,
+        UNIQUE(user_id, post_id),
+        FOREIGN KEY(user_id) REFERENCES users(id),
+        FOREIGN KEY(post_id) REFERENCES posts(id)
+    )''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS follows (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        follower_id INTEGER NOT NULL,
+        followed_id INTEGER NOT NULL,
+        UNIQUE(follower_id, followed_id),
+        FOREIGN KEY(follower_id) REFERENCES users(id),
+        FOREIGN KEY(followed_id) REFERENCES users(id)
+    )''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS notifications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        title TEXT,
+        message TEXT,
+        link TEXT,
+        type TEXT DEFAULT 'info',
         is_read INTEGER DEFAULT 0,
-        link TEXT DEFAULT '/',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(user_id) REFERENCES users(id)
     )''')
 
-    c.execute('''CREATE TABLE withdrawals (
+    c.execute('''CREATE TABLE IF NOT EXISTS stories (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
-        amount REAL NOT NULL,
-        fee REAL DEFAULT 2500,
-        net_amount REAL NOT NULL,
-        bank_name TEXT NOT NULL,
-        bank_account TEXT NOT NULL,
-        account_name TEXT NOT NULL,
-        source TEXT DEFAULT 'saldo',
-        status TEXT DEFAULT 'pending',
-        admin_note TEXT,
-        processed_by INTEGER,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        processed_at TIMESTAMP,
-        FOREIGN KEY(user_id) REFERENCES users(id)
-    )''')
-
-    c.execute('''CREATE TABLE disputes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        room_id INTEGER NOT NULL UNIQUE,
-        opened_by INTEGER NOT NULL,
-        reason TEXT NOT NULL,
-        detail TEXT,
-        status TEXT DEFAULT 'open',
-        verdict TEXT,
-        verdict_note TEXT,
-        resolved_by INTEGER,
-        deadline TIMESTAMP,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        resolved_at TIMESTAMP,
-        FOREIGN KEY(room_id) REFERENCES rekber_rooms(id),
-        FOREIGN KEY(opened_by) REFERENCES users(id)
-    )''')
-
-    c.execute('''CREATE TABLE dispute_evidence (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        dispute_id INTEGER NOT NULL,
-        uploaded_by INTEGER NOT NULL,
-        file_url TEXT NOT NULL,
-        file_type TEXT DEFAULT 'image',
-        description TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(dispute_id) REFERENCES disputes(id)
-    )''')
-
-    c.execute('''CREATE TABLE ratings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        room_id INTEGER NOT NULL UNIQUE,
-        reviewer_id INTEGER NOT NULL,
-        reviewed_id INTEGER NOT NULL,
-        score INTEGER NOT NULL CHECK(score BETWEEN 1 AND 5),
-        review_text TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(room_id) REFERENCES rekber_rooms(id)
-    )''')
-
-    c.execute('''CREATE TABLE affiliates (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL UNIQUE,
-        code TEXT NOT NULL UNIQUE,
-        total_referred INTEGER DEFAULT 0,
-        total_earned REAL DEFAULT 0.0,
-        is_active INTEGER DEFAULT 1,
+        media_url TEXT NOT NULL,
+        media_type TEXT DEFAULT 'image',
+        expires_at TIMESTAMP NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(user_id) REFERENCES users(id)
     )''')
 
-    c.execute('''CREATE TABLE affiliate_logs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        affiliate_id INTEGER NOT NULL,
-        room_id INTEGER NOT NULL,
-        transaction_amount REAL NOT NULL,
-        commission REAL NOT NULL,
-        status TEXT DEFAULT 'pending',
-        paid_at TIMESTAMP,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(affiliate_id) REFERENCES affiliates(id)
-    )''')
-
-    c.execute('''CREATE TABLE shipment_tracking (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        room_id INTEGER NOT NULL,
-        courier TEXT NOT NULL,
-        resi TEXT NOT NULL,
-        status TEXT DEFAULT 'pending',
-        last_status_text TEXT,
-        estimated_arrival TEXT,
-        last_checked TIMESTAMP,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(room_id) REFERENCES rekber_rooms(id)
-    )''')
-
-    c.execute('''CREATE TABLE blacklist (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        type TEXT NOT NULL,
-        value TEXT NOT NULL,
-        reason TEXT,
-        added_by INTEGER,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )''')
-
-    c.execute('''CREATE TABLE audit_logs (
+    c.execute('''CREATE TABLE IF NOT EXISTS audit_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,
         action TEXT NOT NULL,
         detail TEXT,
         ip_address TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )''')
-
-    c.execute('''CREATE TABLE likes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        post_id INTEGER NOT NULL,
-        user_id INTEGER NOT NULL,
+        user_agent TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(post_id, user_id)
+        FOREIGN KEY(user_id) REFERENCES users(id)
     )''')
 
-    c.execute('''CREATE TABLE comments (
+    c.execute('''CREATE TABLE IF NOT EXISTS carts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        post_id INTEGER NOT NULL,
+        quantity INTEGER DEFAULT 1,
+        UNIQUE(user_id, post_id),
+        FOREIGN KEY(user_id) REFERENCES users(id),
+        FOREIGN KEY(post_id) REFERENCES posts(id)
+    )''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS wishlists (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        post_id INTEGER NOT NULL,
+        UNIQUE(user_id, post_id),
+        FOREIGN KEY(user_id) REFERENCES users(id),
+        FOREIGN KEY(post_id) REFERENCES posts(id)
+    )''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS affiliates (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        code TEXT UNIQUE NOT NULL,
+        is_active INTEGER DEFAULT 1,
+        total_referred INTEGER DEFAULT 0,
+        total_earned REAL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+    )''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS affiliate_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        affiliate_id INTEGER NOT NULL,
+        room_id INTEGER NOT NULL,
+        transaction_amount REAL NOT NULL,
+        commission REAL NOT NULL,
+        status TEXT DEFAULT 'paid',
+        paid_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(affiliate_id) REFERENCES affiliates(id),
+        FOREIGN KEY(room_id) REFERENCES rekber_rooms(id)
+    )''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        room_id INTEGER NOT NULL,
+        sender_id INTEGER NOT NULL,
+        message_text TEXT,
+        message_type TEXT DEFAULT 'text',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(room_id) REFERENCES rekber_rooms(id),
+        FOREIGN KEY(sender_id) REFERENCES users(id)
+    )''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS comments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         post_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
         comment_text TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(post_id) REFERENCES posts(id),
+        FOREIGN KEY(user_id) REFERENCES users(id)
     )''')
 
-    for idx in [
-        'CREATE INDEX idx_posts_user ON posts(user_id)',
-        'CREATE INDEX idx_posts_sale ON posts(is_for_sale)',
-        'CREATE INDEX idx_rooms_buyer ON rekber_rooms(buyer_id)',
-        'CREATE INDEX idx_rooms_seller ON rekber_rooms(seller_id)',
-        'CREATE INDEX idx_rooms_status ON rekber_rooms(status)',
-        'CREATE INDEX idx_messages_room ON messages(room_id)',
-        'CREATE INDEX idx_notif_user ON notifications(user_id, is_read)',
-        'CREATE INDEX idx_withdrawals_user ON withdrawals(user_id)',
-        'CREATE INDEX idx_disputes_room ON disputes(room_id)',
-        'CREATE INDEX idx_ratings_reviewed ON ratings(reviewed_id)',
-        'CREATE INDEX idx_affiliate_code ON affiliates(code)',
-    ]:
-        c.execute(idx)
+    c.execute('''CREATE TABLE IF NOT EXISTS ratings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        room_id INTEGER NOT NULL,
+        reviewer_id INTEGER NOT NULL,
+        reviewed_id INTEGER NOT NULL,
+        score INTEGER NOT NULL,
+        review_text TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(room_id) REFERENCES rekber_rooms(id),
+        FOREIGN KEY(reviewer_id) REFERENCES users(id),
+        FOREIGN KEY(reviewed_id) REFERENCES users(id)
+    )''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS vouchers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        seller_id INTEGER NOT NULL,
+        code TEXT NOT NULL,
+        discount_amount REAL NOT NULL,
+        min_purchase REAL DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(seller_id, code),
+        FOREIGN KEY(seller_id) REFERENCES users(id)
+    )''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS withdrawals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        amount REAL NOT NULL,
+        fee REAL NOT NULL,
+        net_amount REAL NOT NULL,
+        bank_name TEXT,
+        bank_account TEXT,
+        account_name TEXT,
+        source TEXT DEFAULT 'saldo',
+        status TEXT DEFAULT 'pending',
+        admin_note TEXT,
+        processed_by INTEGER,
+        processed_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id),
+        FOREIGN KEY(processed_by) REFERENCES users(id)
+    )''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS reports (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        reporter_id INTEGER NOT NULL,
+        target_type TEXT NOT NULL,
+        target_id TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        status TEXT DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(reporter_id) REFERENCES users(id)
+    )''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS disputes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        room_id INTEGER NOT NULL,
+        opened_by INTEGER NOT NULL,
+        reason TEXT NOT NULL,
+        detail TEXT,
+        status TEXT DEFAULT 'open',
+        deadline TIMESTAMP,
+        verdict TEXT,
+        verdict_note TEXT,
+        resolved_by INTEGER,
+        resolved_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(room_id) REFERENCES rekber_rooms(id),
+        FOREIGN KEY(opened_by) REFERENCES users(id),
+        FOREIGN KEY(resolved_by) REFERENCES users(id)
+    )''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS dispute_evidence (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        dispute_id INTEGER NOT NULL,
+        uploaded_by INTEGER NOT NULL,
+        file_url TEXT NOT NULL,
+        file_type TEXT,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(dispute_id) REFERENCES disputes(id),
+        FOREIGN KEY(uploaded_by) REFERENCES users(id)
+    )''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS shipment_tracking (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        room_id INTEGER NOT NULL,
+        courier TEXT,
+        resi TEXT,
+        status TEXT,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(room_id) REFERENCES rekber_rooms(id)
+    )''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS platform_stats (
+        id INTEGER PRIMARY KEY,
+        total_revenue REAL DEFAULT 0,
+        total_transactions INTEGER DEFAULT 0,
+        total_users INTEGER DEFAULT 0,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+
+    c.execute("INSERT OR IGNORE INTO platform_stats(id,total_revenue,total_transactions,total_users) VALUES(1,0,0,0)")
 
     conn.commit()
     conn.close()
-    print("✅ Database Socrow v2 berhasil!")
-    print("⚡ Jalankan: python seed.py untuk akun demo")
+    print("Database Berhasil Diinisialisasi.")
 
 if __name__ == '__main__':
-    init_db()
+    import sys
+    force = '--force' in sys.argv
+    init_db(force=force)

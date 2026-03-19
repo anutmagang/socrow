@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% block title %}Store — Socrow Marketplace{% endblock %}
+
+{% block head %}
+<style>
+    .store-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .cat-grid {
+        display: flex;
+        gap: 12px;
+        overflow-x: auto;
+        padding: 10px 0 24px;
+        scrollbar-width: none;
+    }
+    .cat-grid::-webkit-scrollbar { display: none; }
+    
+    .cat-card {
+        flex: 0 0 100px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 16px;
+        text-align: center;
+        text-decoration: none;
+        color: var(--text-secondary);
+        transition: all 0.2s;
+    }
+    .cat-card i { font-size: 24px; display: block; margin-bottom: 8px; }
+    .cat-card span { font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    .cat-card:hover, .cat-card.active {
+        border-color: var(--accent);
+        background: var(--bg-elevated);
+        color: var(--accent-light);
+        transform: translateY(-4px);
+    }
+
+    .filter-bar {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 24px;
+        margin-bottom: 32px;
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1fr auto;
+        gap: 16px;
+        align-items: flex-end;
+    }
+
+    .market-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 24px;
+    }
+
+    .product-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        transition: all 0.2s;
+        text-decoration: none;
+        color: inherit;
+        display: flex;
+        flex-direction: column;
+    }
+    .product-card:hover { border-color: var(--accent); transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+    
+    .product-img { width: 100%; height: 200px; object-fit: cover; background: var(--bg-elevated); }
+    .product-info { padding: 16px; flex: 1; display: flex; flex-direction: column; }
+    .product-cat { font-size: 10px; text-transform: uppercase; color: var(--accent-light); font-weight: 800; margin-bottom: 4px; }
+    .product-title { font-size: 15px; font-weight: 600; line-height: 1.4; margin-bottom: 12px; height: 42px; overflow: hidden; }
+    .product-price { font-family: var(--font-display); font-size: 18px; font-weight: 800; color: var(--green); margin-top: auto; }
+    
+    .seller-line {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid var(--border);
+        font-size: 12px;
+        color: var(--text-muted);
+    }
+
+    @media (max-width: 900px) {
+        .filter-bar { grid-template-columns: 1fr 1fr; }
+        .filter-bar button { grid-column: span 2; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="store-container">
+    <div style="margin-bottom: 32px;">
+        <h1 class="section-title" style="font-size: 32px;">🛍️ Socrow Store</h1>
+        <p style="color: var(--text-secondary);">Temukan produk terbaik dengan jaminan rekber 100% aman.</p>
+    </div>
+
+    <!-- CATEGORIES -->
+    <div class="cat-grid">
+        <a href="/store" class="cat-card {% if not cat %}active{% endif %}">
+            <i class="fa fa-border-all"></i>
+            <span>Semua</span>
+        </a>
+        {% for c in cats %}
+        <a href="/store?cat={{ c.id }}" class="cat-card {% if cat == c.id %}active{% endif %}">
+            <i class="fa {{ c.icon }}"></i>
+            <span>{{ c.id }}</span>
+        </a>
+        {% endfor %}
+    </div>
+
+    <!-- SEARCH & FILTER -->
+    <form action="/store" method="GET" class="filter-bar">
+        <input type="hidden" name="cat" value="{{ cat or '' }}">
+        <div class="form-group">
+            <label class="form-label">Cari Produk</label>
+            <input type="text" name="q" value="{{ q }}" class="form-input" placeholder="Nama barang...">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Min Harga</label>
+            <input type="number" name="min_price" value="{{ min_price }}" class="form-input" placeholder="0">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Max Harga</label>
+            <input type="number" name="max_price" value="{{ max_price }}" class="form-input" placeholder="Limit">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Sort</label>
+            <select name="sort" class="form-input">
+                <option value="latest" {% if sort=='latest' %}selected{% endif %}>Terbaru</option>
+                <option value="cheapest" {% if sort=='cheapest' %}selected{% endif %}>Termurah</option>
+                <option value="expensive" {% if sort=='expensive' %}selected{% endif %}>Termahal</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary" style="height: 46px; width: 100px;">Filter</button>
+    </form>
+
+    <!-- PRODUCTS -->
+    <div class="market-grid">
+        {% for p in posts %}
+        <div class="product-card">
+            <a href="/user/{{ p.username }}" style="text-decoration:none; color:inherit;">
+                {% if p.media_url %}
+                <img src="/static/uploads/{{ p.media_url }}" class="product-img" loading="lazy">
+                {% else %}
+                <div class="product-img" style="display:flex; align-items:center; justify-content:center; color:var(--text-muted);">
+                    <i class="fa fa-image fa-3x"></i>
+                </div>
+                {% endif %}
+                <div class="product-info">
+                    <span class="product-cat">{{ p.product_category }}</span>
+                    <h3 class="product-title">{{ p.caption[:60] }}{% if p.caption|length > 60 %}...{% endif %}</h3>
+                    <div class="product-price">{{ p.price | rupiah }}</div>
+                </div>
+            </a>
+            
+            <div style="padding: 0 16px 16px; display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; gap:8px;">
+                    <a href="/checkout/{{ p.uuid }}" class="btn btn-primary btn-sm" style="flex:1;">Beli</a>
+                    <button class="btn btn-ghost btn-sm" onclick="addToCart('{{ p.uuid }}')" style="width:40px;">
+                        <i class="fa fa-cart-plus"></i>
+                    </button>
+                </div>
+                <div class="seller-line">
+                    <a href="/store/@{{ p.username }}" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:8px;">
+                        <div class="avatar" style="width:20px; height:20px; font-size:10px;">{{ p.username[0].upper() }}</div>
+                        <span>{{ p.username }}</span>
+                    </a>
+                    {% if p.kyc_status == 'verified' %}
+                    <i class="fa fa-circle-check" style="color:var(--accent); font-size:12px;"></i>
+                    {% endif %}
+                    <span style="margin-left:auto;">{{ p.rating_avg or 0 }}★</span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if not posts %}
+    <div class="card empty-state" style="padding: 80px;">
+        <i class="fa fa-search-minus"></i>
+        <h3>Produk tidak ditemukan</h3>
+        <p>Coba ubah filter atau kata kunci pencarianmu.</p>
+        <a href="/store" class="btn btn-ghost" style="margin-top:20px;">Reset Semua</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function addToCart(pid) {
+        {% if not session.user_id %} window.location.href = '/login'; return; {% endif %}
+        
+        const res = await fetch(`/cart/add/${pid}`, { 
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrfToken }
+        });
+        
+        if (res.ok) {
+            const data = await res.json();
+            const badge = document.getElementById('cartBadge');
+            if (badge) {
+                badge.innerText = data.cart_count;
+                badge.style.display = 'block';
+            } else {
+                location.reload();
+            }
+            showToast('Berhasil', 'Produk ditambahkan ke keranjang.', 'success');
+        } else {
+            const data = await res.json();
+            showToast('Gagal', data.msg || 'Terjadi kesalahan.', 'danger');
+        }
+    }
+</script>
+{% endblock %}

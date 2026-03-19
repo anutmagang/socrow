@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Wishlist Saya — Socrow{% endblock %}
+
+{% block content %}
+<div class="store-container">
+    <div style="margin-bottom: 32px;">
+        <h1 style="font-family:var(--font-display); font-size:28px;">❤️ Wishlist Saya</h1>
+        <p style="color:var(--text-secondary);">Produk-produk yang kamu simpan untuk nanti.</p>
+    </div>
+
+    <div class="market-grid">
+        {% for p in posts %}
+        <div class="product-card">
+            <a href="/checkout/{{ p.uuid }}" style="text-decoration:none; color:inherit;">
+                <img src="/static/uploads/{{ p.media_url }}" class="product-img">
+                <div class="product-info">
+                    <span class="product-cat">{{ p.product_category }}</span>
+                    <h3 class="product-title">{{ p.caption[:50] }}...</h3>
+                    <div class="product-price">{{ p.price | rupiah }}</div>
+                </div>
+            </a>
+            <div style="padding: 0 16px 16px; display:flex; gap:8px;">
+                <a href="/checkout/{{ p.uuid }}" class="btn btn-primary btn-sm" style="flex:1;">Beli</a>
+                <button class="btn btn-ghost btn-sm" onclick="toggleWishlist('{{ p.uuid }}', this)">
+                    <i class="fa-solid fa-heart" style="color:var(--red);"></i>
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if not posts %}
+    <div class="empty-state">
+        <i class="fa fa-heart-crack fa-3x"></i>
+        <h3>Wishlist Kosong</h3>
+        <p>Belum ada produk yang kamu simpan.</p>
+        <a href="/store" class="btn btn-primary" style="margin-top:16px;">Cari Produk</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function toggleWishlist(pid, btn) {
+        const res = await fetch(`/wishlist/toggle/${pid}`, { 
+            method: 'POST',
+            headers: { 'X-CSRF-Token': csrfToken }
+        });
+        if (res.ok) {
+            const data = await res.json();
+            if (data.status === 'removed') {
+                btn.closest('.product-card').remove();
+                if (document.querySelectorAll('.product-card').length === 0) {
+                    location.reload();
+                }
+            }
+        }
+    }
+</script>
+{% endblock %}

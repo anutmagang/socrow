@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Pesan Saya — Socrow{% endblock %}
+
+{% block content %}
+<div style="max-width: 700px; margin: 0 auto;">
+    <h1 class="section-title">💬 Pesan Saya</h1>
+
+    <div class="card" style="padding: 0; overflow: hidden;">
+        {% for r in rooms %}
+        {% set other_name = r.u2_name if session.username == r.u1_name else r.u1_name %}
+        {% set other_id = r.user2_id if session.user_id == r.user1_id else r.user1_id %}
+        <a href="/dm/{{ r.uuid }}" style="display: flex; align-items: center; gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--border); text-decoration: none; color: inherit; transition: background 0.2s;">
+            <div class="avatar">{{ other_name[0].upper() }}</div>
+            <div style="flex: 1;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <strong style="font-size: 15px; color: var(--text-primary);">{{ other_name }}</strong>
+                    <span style="font-size: 11px; color: var(--text-muted);">{{ r.updated_at[:16] }}</span>
+                </div>
+                <p style="font-size: 13px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 400px;">
+                    {{ r.last_message or 'Mulai percakapan baru...' }}
+                </p>
+            </div>
+            <i class="fa fa-chevron-right" style="color: var(--text-muted); font-size: 12px;"></i>
+        </a>
+        {% endfor %}
+
+        {% if not rooms %}
+        <div class="empty-state">
+            <i class="fa fa-comments"></i>
+            <h3>Belum ada pesan</h3>
+            <p>Tanya-tanya ke seller sebelum transaksi di sini.</p>
+            <a href="/" class="btn btn-primary btn-sm" style="margin-top: 16px;">Cari Produk</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+<style>
+    a:hover { background: var(--bg-elevated); }
+</style>

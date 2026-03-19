@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Checkout — Socrow{% endblock %}
+
+{% block content %}
+<div class="main-wrap">
+    <div style="max-width: 600px; margin: 0 auto;">
+        <h1 style="font-family: var(--font-display); margin-bottom: 24px;">🛒 Checkout</h1>
+        
+        <div class="card" style="padding: 24px; margin-bottom: 24px;">
+            <div style="display: flex; gap: 16px; align-items: center; margin-bottom: 20px;">
+                {% if post.media_url %}
+                <img src="/static/uploads/{{ post.media_url }}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;">
+                {% endif %}
+                <div>
+                    <h3 style="margin-bottom: 4px;">{{ post.caption[:50] }}...</h3>
+                    <p style="color: var(--text-secondary); font-size: 14px;">Penjual: @{{ post.seller_name }}</p>
+                </div>
+            </div>
+            
+            <div style="border-top: 1px solid var(--border); padding-top: 16px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span>Harga Barang</span>
+                    <span>{{ post.price | rupiah }}</span>
+                </div>
+                {% if post.product_kind == 'fisik' %}
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span>Ongkos Kirim ({{ post.weight_gram }}g)</span>
+                    <span>{{ shipping_cost | rupiah }}</span>
+                </div>
+                {% endif %}
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span>Biaya Rekber</span>
+                    <span>Rp 2.500</span>
+                </div>
+                <div id="voucherRow" style="display: none; justify-content: space-between; margin-bottom: 8px; color: var(--green);">
+                    <span>Diskon Voucher</span>
+                    <span id="voucherAmt">-Rp 0</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 16px; font-weight: 700; font-size: 18px; border-top: 1px solid var(--border); padding-top: 16px;">
+                    <span>Total Pembayaran</span>
+                    <span id="totalAmt">{{ (post.price + shipping_cost + 2500) | rupiah }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <form action="/bayar/{{ post.uuid }}" method="POST" class="card" style="padding: 24px;">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label class="form-label">Kode Voucher (Opsional)</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" name="voucher_code" id="vCode" class="form-input" placeholder="Punya kode promo?">
+                </div>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 24px;">
+                <label class="form-label">Kode Afiliasi (Opsional)</label>
+                <input type="text" name="affiliate_code" class="form-input" placeholder="Kode dari teman (jika ada)">
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-full btn-lg">
+                <i class="fa fa-shield-check"></i> Bayar Sekarang
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

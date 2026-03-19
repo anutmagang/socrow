@@ -61,14 +61,20 @@
         </div>
 
         <div style="display:flex; flex-direction:column; gap:10px; min-width:140px;">
-            <a href="/admin/verify/{{ u.id }}/approve" class="btn btn-success btn-sm btn-full"
-               onclick="return confirm('Setujui KYC untuk {{ u.username }}?')">
-                <i class="fa fa-check"></i> Setujui
-            </a>
-            <a href="/admin/verify/{{ u.id }}/reject" class="btn btn-danger btn-sm btn-full"
-               onclick="return confirm('Tolak KYC untuk {{ u.username }}?')">
-                <i class="fa fa-xmark"></i> Tolak
-            </a>
+            <form method="POST" action="/admin/verify/{{ u.id }}/approve">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-success btn-sm btn-full"
+                   onclick="return confirm('Setujui KYC untuk {{ u.username }}?')">
+                    <i class="fa fa-check"></i> Setujui
+                </button>
+            </form>
+            <form method="POST" action="/admin/verify/{{ u.id }}/reject">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-danger btn-sm btn-full"
+                   onclick="return confirm('Tolak KYC untuk {{ u.username }}?')">
+                    <i class="fa fa-xmark"></i> Tolak
+                </button>
+            </form>
         </div>
     </div>
     {% endfor %}

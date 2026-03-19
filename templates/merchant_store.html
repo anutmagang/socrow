@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}{{ seller.store_name or seller.username }} — Socrow Store{% endblock %}
+
+{% block head %}
+<style>
+    .merchant-wrap { max-width: 1000px; margin: 0 auto; }
+    
+    .merchant-header {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        padding: 40px;
+        display: flex; gap: 32px;
+        align-items: center;
+        margin-bottom: 40px;
+    }
+    
+    .merchant-avatar {
+        width: 120px; height: 120px;
+        border-radius: 50%;
+        background: var(--bg-elevated);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 48px; font-weight: 800; color: #fff;
+    }
+
+    .merchant-info h1 { font-family: var(--font-display); font-size: 28px; margin-bottom: 8px; }
+    .merchant-badge { font-size: 12px; font-weight: 700; color: var(--accent-light); display: flex; align-items: center; gap: 6px; }
+
+    .merchant-stats { display: flex; gap: 32px; margin-top: 20px; }
+    .m-stat { text-align: center; }
+    .m-stat strong { display: block; font-size: 20px; color: var(--text-primary); }
+    .m-stat span { font-size: 12px; color: var(--text-muted); }
+
+    .merchant-tabs {
+        display: flex; gap: 32px;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 32px;
+    }
+    .m-tab-btn {
+        padding: 12px 0;
+        background: none; border: none;
+        color: var(--text-muted); font-weight: 700;
+        cursor: pointer; border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+    }
+    .m-tab-btn.active { color: var(--accent-light); border-bottom-color: var(--accent); }
+
+    .product-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 20px;
+    }
+
+    .review-list { display: flex; flex-direction: column; gap: 16px; }
+    .review-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 20px;
+    }
+
+    @media (max-width: 700px) {
+        .merchant-header { flex-direction: column; text-align: center; padding: 24px; }
+        .merchant-stats { justify-content: center; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="merchant-wrap">
+    <!-- HEADER -->
+    <div class="merchant-header">
+        <div class="merchant-avatar">{{ seller.username[0].upper() }}</div>
+        <div class="merchant-info" style="flex:1;">
+            <h1>{{ seller.store_name or seller.username }}</h1>
+            <div class="merchant-badge">
+                {% if seller.kyc_status == 'verified' %}
+                <i class="fa fa-circle-check"></i> Merchant Terverifikasi
+                {% else %}
+                <i class="fa fa-circle-info"></i> Penjual Baru
+                {% endif %}
+                · <i class="fa fa-star" style="color:#ffcc00;"></i> {{ seller.rating_avg }} ({{ seller.rating_count }} ulasan)
+            </div>
+            
+            <div class="merchant-stats">
+                <div class="m-stat">
+                    <strong>{{ posts|length }}</strong>
+                    <span>Produk</span>
+                </div>
+                <div class="m-stat">
+                    <strong>{{ seller.total_sales }}</strong>
+                    <span>Terjual</span>
+                </div>
+                <div class="m-stat">
+                    <strong>{{ seller.trust_score }}</strong>
+                    <span>Skor</span>
+                </div>
+            </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+            <a href="/dm/{{ seller.uuid }}" class="btn btn-primary btn-full"><i class="fa fa-comment-dots"></i> Chat Penjual</a>
+            <a href="/user/{{ seller.username }}" class="btn btn-ghost btn-full">Lihat Profil Sosial</a>
+        </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="merchant-tabs">
+        <button class="m-tab-btn active" onclick="showMTab('products')">📦 Produk ({{ posts|length }})</button>
+        <button class="m-tab-btn" onclick="showMTab('reviews')">⭐ Ulasan ({{ reviews|length }})</button>
+    </div>
+
+    <!-- PRODUCTS -->
+    <div id="m-products" class="m-panel">
+        <div class="product-grid">
+            {% for p in posts %}
+            <div class="product-card">
+                <a href="/checkout/{{ p.uuid }}" style="text-decoration:none; color:inherit;">
+                    <img src="/static/uploads/{{ p.media_url }}" class="product-img">
+                    <div class="product-info">
+                        <span class="product-cat">{{ p.product_category }}</span>
+                        <h3 class="product-title">{{ p.caption[:50] }}...</h3>
+                        <div class="product-price">{{ p.price | rupiah }}</div>
+                    </div>
+                </a>
+                <div style="padding: 0 16px 16px;">
+                    <a href="/checkout/{{ p.uuid }}" class="btn btn-primary btn-full btn-sm">Beli</a>
+                </div>
+            </div>
+            {% endfor %}
+            {% if not posts %}
+            <div class="empty-state"><p>Penjual belum memiliki produk.</p></div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- REVIEWS -->
+    <div id="m-reviews" class="m-panel" style="display:none;">
+        <div class="review-list">
+            {% for r in reviews %}
+            <div class="review-card">
+                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                    <div style="font-weight:700;">@{{ r.reviewer }}</div>
+                    <div style="color:#ffcc00;">
+                        {% for i in range(r.score) %}★{% endfor %}
+                    </div>
+                </div>
+                <div style="font-size:14px; color:var(--text-secondary);">{{ r.review_text }}</div>
+                <div style="font-size:11px; color:var(--text-muted); margin-top:10px;">{{ r.created_at[:10] }}</div>
+            </div>
+            {% endfor %}
+            {% if not reviews %}
+            <div class="empty-state"><p>Belum ada ulasan untuk penjual ini.</p></div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function showMTab(t) {
+        document.querySelectorAll('.m-panel').forEach(p => p.style.display = 'none');
+        document.querySelectorAll('.m-tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(`m-${t}`).style.display = 'block';
+        event.target.classList.add('active');
+    }
+</script>
+{% endblock %}

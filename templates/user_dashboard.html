@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Dasbor Saya — Socrow{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    .dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px; }
+    .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; position: relative; overflow: hidden; }
+    .stat-card h3 { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+    .stat-card .val { font-size: 24px; font-weight: 800; font-family: var(--font-display); color: var(--text-primary); }
+    .stat-card i { position: absolute; right: 20px; top: 20px; font-size: 32px; opacity: 0.1; color: var(--accent); }
+
+    .activity-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+    .activity-item { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+    .activity-item:last-child { border-bottom: none; }
+    .act-icon { width: 32px; height: 32px; border-radius: 50%; background: var(--bg-elevated); display: flex; align-items: center; justify-content: center; font-size: 14px; color: var(--accent-light); }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 class="section-title">📊 Dasbor Saya</h1>
+
+<!-- SELLER STATS -->
+<h2 style="font-size: 16px; margin-bottom: 16px; color: var(--text-secondary);">💼 Panel Penjual</h2>
+<div class="dash-grid">
+    <div class="stat-card">
+        <i class="fa fa-money-bill-trend-up"></i>
+        <h3>Total Penghasilan</h3>
+        <div class="val" style="color: var(--green);">{{ seller_stats.earned | rupiah }}</div>
+    </div>
+    <div class="stat-card">
+        <i class="fa fa-box-open"></i>
+        <h3>Transaksi Aktif</h3>
+        <div class="val">{{ seller_stats.active }}</div>
+    </div>
+    <div class="stat-card">
+        <i class="fa fa-star"></i>
+        <h3>Rating Toko</h3>
+        <div class="val">{{ user.rating_avg or 0 }} / 5.0</div>
+    </div>
+</div>
+
+<!-- BUYER STATS -->
+<h2 style="font-size: 16px; margin-bottom: 16px; color: var(--text-secondary);">🛒 Panel Pembeli</h2>
+<div class="dash-grid">
+    <div class="stat-card" style="border-color: rgba(108, 99, 255, 0.2);">
+        <i class="fa fa-shopping-bag"></i>
+        <h3>Total Belanja</h3>
+        <div class="val">{{ buyer_stats.spent | rupiah }}</div>
+    </div>
+    <div class="stat-card">
+        <i class="fa fa-truck-ramp-box"></i>
+        <h3>Paket Dijalan</h3>
+        <div class="val">{{ buyer_stats.arriving }}</div>
+    </div>
+    <div class="stat-card">
+        <i class="fa fa-heart"></i>
+        <h3>Wishlist</h3>
+        <div class="val">{{ buyer_stats.wish }}</div>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+    <div class="activity-card">
+        <div style="padding: 16px 20px; border-bottom: 1px solid var(--border); font-weight: 700;">Aktivitas Terakhir</div>
+        {% for a in activities %}
+        <div class="activity-item">
+            <div class="act-icon"><i class="fa fa-bolt"></i></div>
+            <div style="flex: 1;">
+                <div style="font-size: 14px; font-weight: 600;">{{ a.action }}</div>
+                <div style="font-size: 12px; color: var(--text-muted);">{{ a.detail }}</div>
+            </div>
+            <span style="font-size: 11px; color: var(--text-muted);">{{ a.created_at[:16] }}</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="card" style="padding: 24px; text-align: center;">
+        <lottie-player src="https://assets3.lottiefiles.com/packages/lf20_qpwb7t6c.json" background="transparent" speed="1" style="width: 120px; height: 120px; margin: 0 auto;" loop autoplay></lottie-player>
+        <h3 style="font-size: 15px; margin: 12px 0 8px;">Butuh Bantuan?</h3>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">Tim support Socrow siap membantu kendala transaksi anda.</p>
+        <a href="/dm/1" class="btn btn-ghost btn-sm btn-full">Hubungi Admin</a>
+    </div>
+</div>
+{% endblock %}

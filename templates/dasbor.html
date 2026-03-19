@@ -1,6 +1,54 @@
 {% extends "base.html" %}
 {% block title %}Dasbor Rekber — Socrow{% endblock %}
 
+{% block scripts %}
+<script>
+    const ctx = document.getElementById('incomeChart').getContext('2d');
+    const incomeChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ chart_labels | tojson }},
+            datasets: [{
+                label: 'Pendapatan (Rp)',
+                data: {{ chart_values | tojson }},
+                borderColor: '#6c63ff',
+                backgroundColor: 'rgba(108, 99, 255, 0.1)',
+                borderWidth: 3,
+                tension: 0.4,
+                fill: true,
+                pointBackgroundColor: '#6c63ff',
+                pointRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: {
+                        color: '#8888a0',
+                        callback: function(value) {
+                            if (value >= 1000000) return 'Rp ' + (value/1000000) + 'jt';
+                            if (value >= 1000) return 'Rp ' + (value/1000) + 'rb';
+                            return 'Rp ' + value;
+                        }
+                    }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#8888a0' }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}
+
 {% block head %}
 <style>
     .dash-header {
@@ -112,11 +160,37 @@
     <p>Kelola semua transaksi jual beli kamu dalam satu tempat.</p>
 </div>
 
+<div class="card" style="padding: 24px; margin-bottom: 28px;">
+    <h3 style="font-family: var(--font-display); font-size: 18px; margin-bottom: 20px;">📈 Statistik Penjualan (7 Hari Terakhir)</h3>
+    <div style="height: 250px; width: 100%;">
+        <canvas id="incomeChart"></canvas>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px;">
+    <div class="card" style="padding: 20px; text-align: center;">
+        <div style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Total Transaksi</div>
+        <div style="font-size: 24px; font-weight: 800; font-family: var(--font-display);">{{ stats.total }}</div>
+    </div>
+    <div class="card" style="padding: 20px; text-align: center;">
+        <div style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Berhasil</div>
+        <div style="font-size: 24px; font-weight: 800; font-family: var(--font-display); color: var(--green);">{{ stats.selesai }}</div>
+    </div>
+    <div class="card" style="padding: 20px; text-align: center;">
+        <div style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Aktif</div>
+        <div style="font-size: 24px; font-weight: 800; font-family: var(--font-display); color: var(--accent-light);">{{ stats.aktif }}</div>
+    </div>
+    <div class="card" style="padding: 20px; text-align: center;">
+        <div style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Komplain</div>
+        <div style="font-size: 24px; font-weight: 800; font-family: var(--font-display); color: var(--red);">{{ stats.komplain }}</div>
+    </div>
+</div>
+
 {% if rooms %}
 <div class="rooms-grid">
     {% for r in rooms %}
     {% set is_buyer = r.buyer_id == session.user_id %}
-    <a href="/ruang/{{ r.id }}" class="room-card" style="animation-delay: {{ loop.index0 * 0.05 }}s;">
+    <a href="/ruang/{{ r.uuid }}" class="room-card" style="animation-delay: {{ loop.index0 * 0.05 }}s;">
         <div class="room-icon" style="
             {% if r.status == 'selesai' %}background:rgba(34,211,160,0.12);
             {% elif r.status == 'komplain' %}background:rgba(255,85,114,0.12);

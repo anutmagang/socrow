@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}Explore — Temukan Hal Baru di Socrow{% endblock %}
+
+{% block head %}
+<style>
+    .explore-container { max-width: 900px; margin: 0 auto; }
+    
+    .search-bar-wrap {
+        margin-bottom: 24px;
+        position: sticky;
+        top: 80px;
+        z-index: 10;
+        background: var(--bg-body);
+        padding: 10px 0;
+    }
+    
+    .explore-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 4px;
+    }
+    .explore-item {
+        aspect-ratio: 1 / 1;
+        background: var(--bg-elevated);
+        overflow: hidden;
+        position: relative;
+        cursor: pointer;
+        border-radius: var(--radius-sm);
+    }
+    .explore-item.reels-item {
+        grid-row: span 2;
+        aspect-ratio: 9 / 16;
+    }
+    .explore-item img, .explore-item video { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s; }
+    .explore-item:hover img { transform: scale(1.05); }
+    .explore-item .overlay {
+        position: absolute; top:0; left:0; right:0; bottom:0;
+        background: rgba(0,0,0,0.2);
+        display: flex; align-items: center; justify-content: center;
+        opacity: 0; transition: opacity 0.2s;
+        color: #fff; font-weight: 700;
+    }
+    .explore-item:hover .overlay { opacity: 1; }
+
+    .suggested-section {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 20px;
+        margin-bottom: 24px;
+    }
+    .suggest-user {
+        display: flex; align-items: center; gap: 12px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--border);
+    }
+    .suggest-user:last-child { border-bottom: none; }
+
+    @media (max-width: 600px) {
+        .explore-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="explore-container">
+    <!-- SEARCH BAR -->
+    <div class="search-bar-wrap">
+        <form action="/search" method="GET" style="display:flex; gap:10px; position:relative;" id="searchForm">
+            <div style="flex:1; position:relative;">
+                <i class="fa fa-search" style="position:absolute; left:16px; top:50%; transform:translateY(-50%); color:var(--text-muted);"></i>
+                <input type="text" name="q" id="searchInput" class="form-input" placeholder="Cari orang, postingan, atau hashtag..." style="padding-left:44px; border-radius:30px; height:46px;" autocomplete="off">
+                <div id="searchSuggestions" class="search-suggestions"></div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="border-radius:30px; padding:0 24px;">Cari</button>
+        </form>
+    </div>
+
+    <!-- SUGGESTED USERS -->
+    {% if suggested_users %}
+    <div class="suggested-section">
+        <h3 style="font-family:var(--font-display); font-size:16px; margin-bottom:12px;">✨ Rekomendasi untuk Kamu</h3>
+        {% for u in suggested_users %}
+        <div class="suggest-user">
+            <div class="avatar" style="width:40px; height:40px;">{{ u.username[0].upper() }}</div>
+            <div style="flex:1;">
+                <a href="/user/{{ u.username }}" style="text-decoration:none; color:inherit; font-weight:700; font-size:14px;">{{ u.username }}</a>
+                <div style="font-size:11px; color:var(--text-muted);">{{ u.rating_avg }} ★ Penjual Terpercaya</div>
+            </div>
+            <a href="/user/{{ u.username }}" class="btn btn-ghost btn-sm" style="border-radius:20px;">Lihat Profil</a>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- EXPLORE GRID (Instagram Style) -->
+    <div class="explore-grid">
+        {% for p in posts %}
+        <a href="/?q={{ p.uuid }}" class="explore-item {% if p.post_type == 'video' and loop.index % 5 == 0 %}reels-item{% endif %}">
+            {% if p.post_type == 'video' %}
+            <video src="/static/uploads/{{ p.media_url }}" muted onmouseover="this.play()" onmouseout="this.pause(); this.currentTime=0;"></video>
+            {% if loop.index % 5 == 0 %}<div style="position:absolute; top:12px; right:12px; color:#fff; font-size:14px;"><i class="fa fa-clapperboard"></i></div>{% endif %}
+            {% else %}
+            <img src="/static/uploads/{{ p.media_url }}" loading="lazy">
+            {% endif %}
+            <div class="overlay">
+                <i class="fa fa-heart"></i>&nbsp;{{ p.like_count }}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+
+    {% if not posts %}
+    <div class="empty-state">
+        <i class="fa fa-compass fa-3x"></i>
+        <h3>Belum ada konten populer</h3>
+        <p>Ayo buat postingan pertamamu!</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const searchInput = document.getElementById('searchInput');
+    const suggestionsBox = document.getElementById('searchSuggestions');
+    let debounceTimer;
+
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            const q = searchInput.value.trim();
+            
+            if (q.length < 2) {
+                suggestionsBox.style.display = 'none';
+                return;
+            }
+
+            debounceTimer = setTimeout(async () => {
+                const res = await fetch(`/api/search_suggestions?q=${encodeURIComponent(q)}`);
+                const data = await res.json();
+                
+                if (data.length > 0) {
+                    suggestionsBox.innerHTML = data.map(item => `
+                        <a href="${item.link}" class="suggestion-item">
+                            <i class="fa ${item.type === 'user' ? 'fa-user' : 'fa-hashtag'}"></i>
+                            <span>${item.text}</span>
+                        </a>
+                    `).join('');
+                    suggestionsBox.style.display = 'block';
+                } else {
+                    suggestionsBox.style.display = 'none';
+                }
+            }, 300);
+        });
+
+        // Close suggestions when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#searchForm')) {
+                suggestionsBox.style.display = 'none';
+            }
+        });
+    }
+</script>
+{% endblock %}

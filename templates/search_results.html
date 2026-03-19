@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Hasil Pencarian: "{{ q }}" — Socrow{% endblock %}
+
+{% block head %}
+<style>
+    .search-container { max-width: 700px; margin: 0 auto; }
+    
+    .search-tabs {
+        display: flex; gap: 4px;
+        margin-bottom: 24px;
+        border-bottom: 1px solid var(--border);
+    }
+    .search-tab-btn {
+        padding: 12px 24px;
+        background: none; border: none;
+        color: var(--text-muted); font-weight: 700;
+        cursor: pointer; border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+    }
+    .search-tab-btn.active { color: var(--accent-light); border-bottom-color: var(--accent); }
+
+    .user-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
+    .user-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 16px 20px;
+        display: flex; align-items: center; gap: 16px;
+        text-decoration: none; color: inherit;
+        transition: transform 0.2s;
+    }
+    .user-card:hover { transform: translateX(8px); border-color: var(--border-hover); }
+
+    .post-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 4px;
+    }
+    .post-item {
+        aspect-ratio: 1/1;
+        background: var(--bg-elevated);
+        overflow: hidden;
+        border-radius: var(--radius-sm);
+    }
+    .post-item img, .post-item video { width: 100%; height: 100%; object-fit: cover; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="search-container">
+    <div style="margin-bottom: 32px;">
+        <h1 style="font-family:var(--font-display); font-size:24px;">🔍 Hasil untuk "{{ q }}"</h1>
+        <p style="color:var(--text-secondary);">Menemukan {{ users|length }} pengguna, {{ social_posts|length }} postingan sosial, dan {{ products|length }} produk.</p>
+    </div>
+
+    <!-- TABS -->
+    <div class="search-tabs">
+        <button class="search-tab-btn active" onclick="showTab('users', this)">Pengguna</button>
+        <button class="search-tab-btn" onclick="showTab('social', this)">Sosial</button>
+        <button class="search-tab-btn" onclick="showTab('market', this)">Marketplace</button>
+    </div>
+
+    <!-- USERS -->
+    <div id="tab-users" class="search-panel">
+        <div class="user-list">
+            {% for u in users %}
+            <a href="/user/{{ u.username }}" class="user-card">
+                <div class="avatar" style="width:50px; height:50px; font-size:20px;">
+                    {% if u.avatar_url %}
+                    <img src="/static/uploads/{{ u.avatar_url }}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
+                    {% else %}
+                    {{ u.username[0].upper() }}
+                    {% endif %}
+                </div>
+                <div style="flex:1;">
+                    <div style="font-weight:700; font-size:16px;">
+                        {{ u.username }}
+                        {% if u.kyc_status == 'verified' %}
+                        <i class="fa fa-circle-check" style="color:var(--accent); font-size:14px; margin-left:4px;"></i>
+                        {% endif %}
+                    </div>
+                    <div style="font-size:13px; color:var(--text-muted); margin-top:4px;">{{ u.bio or 'Tidak ada bio.' }}</div>
+                </div>
+                <i class="fa fa-chevron-right" style="color:var(--text-muted);"></i>
+            </a>
+            {% endfor %}
+            {% if not users %}
+            <div class="empty-state"><p>Tidak ada pengguna ditemukan.</p></div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- SOCIAL POSTS -->
+    <div id="tab-social" class="search-panel" style="display:none;">
+        <div class="post-grid">
+            {% for p in social_posts %}
+            <a href="/?q={{ p.uuid }}" class="post-item">
+                {% if p.post_type == 'video' %}
+                <video src="/static/uploads/{{ p.media_url }}"></video>
+                {% else %}
+                <img src="/static/uploads/{{ p.media_url }}" loading="lazy">
+                {% endif %}
+            </a>
+            {% endfor %}
+            {% if not social_posts %}
+            <div class="empty-state"><p>Tidak ada postingan sosial ditemukan.</p></div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- MARKETPLACE PRODUCTS -->
+    <div id="tab-market" class="search-panel" style="display:none;">
+        <div class="post-grid">
+            {% for p in products %}
+            <a href="/checkout/{{ p.uuid }}" class="post-item" style="position:relative;">
+                <img src="/static/uploads/{{ p.media_url }}" loading="lazy">
+                <div style="position:absolute; bottom:0; left:0; right:0; background:linear-gradient(transparent, rgba(0,0,0,0.8)); padding:8px; color:white; font-size:10px; font-weight:700;">
+                    {{ p.price | rupiah }}
+                </div>
+            </a>
+            {% endfor %}
+            {% if not products %}
+            <div class="empty-state"><p>Tidak ada produk ditemukan.</p></div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function showTab(t, btn) {
+        document.querySelectorAll('.search-panel').forEach(p => p.style.display = 'none');
+        document.querySelectorAll('.search-tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(`tab-${t}`).style.display = 'block';
+        btn.classList.add('active');
+    }
+</script>
+{% endblock %}

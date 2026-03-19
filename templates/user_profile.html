@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+{% block title %}{{ user.username }} — Socrow Profil{% endblock %}
+
+{% block head %}
+<style>
+    .profile-wrap { max-width: 800px; margin: 0 auto; }
+    
+    .profile-cover {
+        width: 100%;
+        height: 200px;
+        background: var(--bg-elevated);
+        background-size: cover;
+        background-position: center;
+        border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+    }
+
+    .profile-header {
+        margin-top: -50px;
+        padding: 0 20px 30px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 16px;
+    }
+
+    .profile-avatar {
+        width: 120px; height: 120px;
+        border-radius: 50%;
+        background: var(--bg-elevated);
+        border: 4px solid var(--bg-body);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 48px; font-weight: 800; font-family: var(--font-display);
+        color: #fff;
+        overflow: hidden;
+    }
+    .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+    .profile-username { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+    
+    .profile-stats { display: flex; gap: 24px; margin: 10px 0; }
+    .profile-stats div { font-size: 14px; }
+    .profile-stats strong { font-weight: 800; margin-right: 4px; color: var(--text-primary); }
+    .profile-stats span { color: var(--text-secondary); }
+
+    .profile-bio { font-size: 14px; color: var(--text-primary); max-width: 450px; line-height: 1.5; }
+
+    .profile-btns { display: flex; gap: 10px; margin-top: 10px; }
+
+    /* TABS TIKTOK STYLE */
+    .tabs-nav {
+        display: flex;
+        border-top: 1px solid var(--border);
+        margin-top: 30px;
+    }
+    .tab-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 60px;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 700;
+        position: relative;
+        transition: all 0.2s;
+        gap: 4px;
+    }
+    .tab-item i { font-size: 18px; }
+    .tab-item:hover { color: var(--text-primary); background: rgba(255,255,255,0.02); }
+    .tab-item.active { color: var(--accent); }
+    .tab-item.active::after {
+        content: '';
+        position: absolute;
+        bottom: 0; left: 15%; right: 15%; height: 3px;
+        background: var(--accent);
+        border-radius: 3px 3px 0 0;
+    }
+
+    /* GRID FOR POSTS */
+    .content-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2px;
+        margin-top: 2px;
+    }
+    .grid-item {
+        aspect-ratio: 1 / 1.3;
+        background: var(--bg-elevated);
+        overflow: hidden;
+        position: relative;
+        cursor: pointer;
+    }
+    .grid-item img, .grid-item video { width: 100%; height: 100%; object-fit: cover; }
+    .grid-item .overlay {
+        position: absolute; bottom: 8px; left: 8px;
+        display: flex; align-items: center; gap: 4px;
+        font-size: 12px; font-weight: 700; color: #fff;
+        text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    }
+
+    /* SHOP TAB CONTENT */
+    .shop-list {
+        padding: 20px;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 16px;
+    }
+    .shop-item {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        text-decoration: none;
+        color: inherit;
+    }
+    .shop-item img { width: 100%; aspect-ratio: 1; object-fit: cover; }
+    .shop-item-info { padding: 10px; }
+    .shop-item-title { font-size: 12px; height: 34px; overflow: hidden; margin-bottom: 6px; }
+    .shop-item-price { font-weight: 800; color: var(--green); font-size: 14px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-wrap">
+    <div class="profile-cover" style="{% if user.cover_url %}background-image: url('/static/uploads/{{ user.cover_url }}');{% endif %}"></div>
+    <div class="profile-header">
+        <div class="profile-avatar">
+            {% if user.avatar_url %}
+            <img src="/static/uploads/{{ user.avatar_url }}">
+            {% else %}
+            {{ user.username[0].upper() }}
+            {% endif %}
+        </div>
+        <div class="profile-username">
+            @{{ user.username }}
+            {% if user.kyc_status == 'verified' %}
+            <i class="fa fa-circle-check" style="color:var(--accent); font-size:16px;" title="Verified Account"></i>
+            {% endif %}
+            {% set badge = get_seller_badge(user.id) %}
+            {% if badge %}
+            <i class="fa {{ badge.icon }}" style="color:{{ badge.color }}; font-size:16px;" title="{{ badge.name }}"></i>
+            {% endif %}
+        </div>
+        
+        <div class="profile-stats">
+            <a href="/user/{{ user.username }}/followers" style="text-decoration:none; color:inherit;">
+                <div><strong>{{ followers }}</strong><span>Pengikut</span></div>
+            </a>
+            <a href="/user/{{ user.username }}/following" style="text-decoration:none; color:inherit;">
+                <div><strong>{{ following }}</strong><span>Mengikuti</span></div>
+            </a>
+            <div><strong>{{ total_likes }}</strong><span>Suka</span></div>
+        </div>
+
+        <div class="profile-bio">
+            {{ user.bio or 'Belum ada bio.' }}
+            {% if user.website %}
+            <div style="margin-top:8px;">
+                <a href="{{ user.website }}" target="_blank" style="color:var(--accent-light); text-decoration:none; font-size:13px;">
+                    <i class="fa fa-link" style="font-size:11px;"></i> {{ user.website.replace('https://','').replace('http://','') }}
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="profile-btns">
+            {% if session.user_id == user.id %}
+            <a href="/akun" class="btn btn-ghost btn-sm" style="width:120px;">Edit Profil</a>
+            <a href="/logout" class="btn btn-ghost btn-sm" style="width:40px;"><i class="fa fa-right-from-bracket"></i></a>
+            {% else %}
+            <button class="btn btn-primary btn-sm" id="followBtn" style="width:160px;">Ikuti</button>
+            <a href="/dm/{{ user.uuid }}" class="btn btn-ghost btn-sm" style="width:44px;"><i class="fa fa-comment-dots"></i></a>
+            <a href="/store/@{{ user.username }}" class="btn btn-ghost btn-sm" style="width:44px;"><i class="fa fa-shopping-bag"></i></a>
+            <button class="btn btn-ghost btn-sm" style="width:44px; color:var(--red);" onclick="openReportModal('user', '{{ user.uuid }}')"><i class="fa fa-flag"></i></button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs-nav">
+        <div class="tab-item active" onclick="switchTab('feed', this)"><i class="fa fa-table-cells"></i> Sosial</div>
+        <div class="tab-item" onclick="switchTab('shop', this)"><i class="fa fa-bag-shopping"></i> Marketplace</div>
+        <div class="tab-item" onclick="switchTab('liked', this)"><i class="fa fa-heart"></i> Suka</div>
+    </div>
+
+    <div id="tab-feed" class="tab-content">
+        <div class="content-grid">
+            {% for p in social_posts %}
+            <div class="grid-item">
+                {% if p.media_url %}
+                    {% if p.post_type == 'video' %}
+                    <video src="/static/uploads/{{ p.media_url }}"></video>
+                    {% else %}
+                    <img src="/static/uploads/{{ p.media_url }}" loading="lazy">
+                    {% endif %}
+                {% else %}
+                    <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:var(--bg-card); color:var(--text-muted); padding:10px; text-align:center; font-size:12px;">
+                        {{ p.caption[:50] }}{% if p.caption|length > 50 %}...{% endif %}
+                    </div>
+                {% endif %}
+                <div class="overlay"><i class="fa fa-play"></i> {{ p.like_count or 0 }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% if not social_posts %}
+        <div class="empty-state">
+            <lottie-player src="https://assets10.lottiefiles.com/packages/lf20_glp9al82.json" background="transparent" speed="1" style="width: 200px; height: 200px; margin: 0 auto;" loop autoplay></lottie-player>
+            <p>Belum ada postingan.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- SHOP CONTENT -->
+    <div id="tab-shop" class="tab-content" style="display:none;">
+        <div class="shop-list">
+            {% for p in store_posts %}
+            <div class="shop-item">
+                <a href="/checkout/{{ p.uuid }}" style="text-decoration:none; color:inherit;">
+                    <img src="/static/uploads/{{ p.media_url }}">
+                    <div class="shop-item-info">
+                        <div class="shop-item-title">{{ p.caption[:40] }}...</div>
+                        <div class="shop-item-price">{{ p.price | rupiah }}</div>
+                    </div>
+                </a>
+                <div style="padding: 0 10px 10px;">
+                    <a href="/checkout/{{ p.uuid }}" class="btn btn-primary btn-full btn-sm" style="font-size:11px; padding:6px;">
+                        Beli
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% if not store_posts %}
+        <div class="empty-state"><p>Tidak ada produk dijual.</p></div>
+        {% endif %}
+    </div>
+
+    <!-- LIKED CONTENT (PLACEHOLDER) -->
+    <div id="tab-liked" class="tab-content" style="display:none;">
+        <div class="empty-state"><i class="fa fa-lock fa-3x"></i><p>Postingan yang disukai disembunyikan oleh pengguna.</p></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function switchTab(tabId, el) {
+        document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+        document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+        
+        document.getElementById('tab-' + tabId).style.display = 'block';
+        el.classList.add('active');
+    }
+
+    const followBtn = document.getElementById('followBtn');
+    if (followBtn) {
+        followBtn.addEventListener('click', async () => {
+            {% if not session.user_id %} window.location.href = '/login'; return; {% endif %}
+            const res = await fetch(`/follow/${uid}`, { 
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                followBtn.innerText = data.followed ? 'Mengikuti' : 'Ikuti';
+                followBtn.classList.toggle('btn-primary', !data.followed);
+                followBtn.classList.toggle('btn-ghost', data.followed);
+            }
+        });
+    }
+</script>
+{% endblock %}

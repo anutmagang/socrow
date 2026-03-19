@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Buat Postingan Sosial — Socrow{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <a href="/tambah" class="btn btn-ghost btn-sm" style="margin-bottom: 20px;"><i class="fa fa-arrow-left"></i> Kembali</a>
+    
+    <div class="card" style="padding: 32px;">
+        <h1 style="font-family: var(--font-display); font-size: 24px; margin-bottom: 8px;">📸 Postingan Baru</h1>
+        <p style="color: var(--text-secondary); margin-bottom: 24px;">Bagikan momen serumu hari ini.</p>
+
+        <form action="/tambah/post" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label class="form-label">Media (Foto/Video)</label>
+                <input type="file" name="media_file" class="form-input" accept="image/*,video/*" required>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label class="form-label">Caption</label>
+                <textarea name="caption" class="form-input" rows="4" placeholder="Apa yang kamu pikirkan? Gunakan #hashtag untuk mempermudah pencarian." required></textarea>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 24px;">
+                <label class="form-label">Foto Tambahan (Opsional)</label>
+                <input type="file" name="extra_images" class="form-input" accept="image/*" multiple>
+                <small style="color: var(--text-muted);">Kamu bisa memilih lebih dari satu foto.</small>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-full btn-lg">Bagikan Sekarang</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
