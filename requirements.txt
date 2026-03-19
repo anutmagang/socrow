@@ -11,4 +11,3 @@ eventlet==0.33.3
 gunicorn==21.2.0
 werkzeug==3.0.1
 requests==2.31.0
-xendit==2.2.0

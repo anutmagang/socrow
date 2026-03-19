@@ -21,6 +21,7 @@ def init_db(force=False):
         avatar_url TEXT,
         cover_url TEXT,
         website TEXT,
+        store_name TEXT,
         kyc_status TEXT DEFAULT 'none', -- none, pending, verified
         kyc_name TEXT,
         bank_name TEXT,
