@@ -1,11 +1,26 @@
 import os as _os
 _DEBUG = _os.environ.get('DEBUG', '0').lower() in ('1', 'true', 'yes', 'y')
+
+SOCKETIO_ASYNC_MODE = _os.environ.get('SOCKETIO_ASYNC_MODE', '').strip().lower()
+if not SOCKETIO_ASYNC_MODE:
+    SOCKETIO_ASYNC_MODE = 'threading'
+
+if SOCKETIO_ASYNC_MODE not in ('threading', 'eventlet', 'gevent', 'gevent_uwsgi'):
+    SOCKETIO_ASYNC_MODE = 'threading'
+
 if not _DEBUG:
-    try:
-        import eventlet
-        eventlet.monkey_patch()
-    except Exception:
-        pass
+    if SOCKETIO_ASYNC_MODE == 'eventlet':
+        try:
+            import eventlet
+            eventlet.monkey_patch()
+        except Exception:
+            SOCKETIO_ASYNC_MODE = 'threading'
+    elif SOCKETIO_ASYNC_MODE == 'gevent':
+        try:
+            from gevent import monkey
+            monkey.patch_all()
+        except Exception:
+            SOCKETIO_ASYNC_MODE = 'threading'
 
 from flask import Flask, render_template, request, redirect, session, jsonify, flash, abort, url_for, send_from_directory, make_response
 from flask_socketio import SocketIO, emit, join_room, leave_room
@@ -19,11 +34,15 @@ from argon2.exceptions import VerifyMismatchError
 ph = PasswordHasher()
 from fpdf import FPDF
 import io
+from urllib.parse import urlparse
 from werkzeug.utils import secure_filename
 from functools import wraps
 from datetime import datetime, timedelta
 import sqlite3, os, random, string, re, json, logging, uuid, hmac, secrets
-import magic
+try:
+    import magic
+except Exception:
+    magic = None
 from PIL import Image
 
 # ─── KONFIGURASI ────────────────────────────────────────────────────────────
@@ -68,7 +87,11 @@ talisman = Talisman(app, content_security_policy=csp, force_https=FORCE_HTTPS)
 _cors_raw = os.environ.get('CORS_ALLOWED_ORIGINS', '').strip()
 _cors_list = [o.strip() for o in _cors_raw.split(',') if o.strip()] if _cors_raw else None
 REDIS_URL = os.environ.get('REDIS_URL', '').strip() or None
-socketio = SocketIO(app, cors_allowed_origins=_cors_list, async_mode='eventlet', message_queue=REDIS_URL)
+try:
+    socketio = SocketIO(app, cors_allowed_origins=_cors_list, async_mode=SOCKETIO_ASYNC_MODE, message_queue=REDIS_URL)
+except ValueError:
+    SOCKETIO_ASYNC_MODE = 'threading'
+    socketio = SocketIO(app, cors_allowed_origins=_cors_list, async_mode=SOCKETIO_ASYNC_MODE, message_queue=REDIS_URL)
 limiter = Limiter(
     get_remote_address,
     app=app,
@@ -232,27 +255,87 @@ def get_db():
     conn.execute("PRAGMA busy_timeout=5000")
     return _CompatConn(conn, "sqlite")
 
-def allowed_file(file_obj):
-    if not file_obj or not file_obj.filename: return False
-    fn = file_obj.filename
-    if '.' not in fn: return False
-    ext = fn.rsplit('.', 1)[1].lower()
-    if ext not in ALLOWED_EXT: return False
-    
-    # MIME-Type Validation (More Secure)
+def _migrate_sqlite_messages_sender_fk():
+    if DATABASE_URL and (DATABASE_URL.startswith("postgresql://") or DATABASE_URL.startswith("postgres://")):
+        return
+    db_path = 'sosmed_rekber.db'
+    if DATABASE_URL.startswith("sqlite:///"):
+        db_path = DATABASE_URL.replace("sqlite:///", "")
+    if not os.path.exists(db_path):
+        return
+    conn = sqlite3.connect(db_path)
     try:
+        cur = conn.execute("PRAGMA foreign_key_list(messages)")
+        fks = cur.fetchall()
+        has_sender_fk = False
+        for fk in fks:
+            if len(fk) >= 5 and fk[2] == 'users' and fk[3] == 'sender_id':
+                has_sender_fk = True
+                break
+        if not has_sender_fk:
+            return
+        conn.execute("PRAGMA foreign_keys=OFF")
+        conn.execute("BEGIN")
+        conn.execute("ALTER TABLE messages RENAME TO messages_old")
+        conn.execute('''CREATE TABLE messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            room_id INTEGER NOT NULL,
+            sender_id INTEGER NOT NULL,
+            message_text TEXT,
+            message_type TEXT DEFAULT 'text',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(room_id) REFERENCES rekber_rooms(id)
+        )''')
+        conn.execute("""INSERT INTO messages(id, room_id, sender_id, message_text, message_type, created_at)
+                        SELECT id, room_id, sender_id, message_text, message_type, created_at FROM messages_old""")
+        conn.execute("DROP TABLE messages_old")
+        conn.execute("COMMIT")
+        conn.execute("PRAGMA foreign_keys=ON")
+    except Exception:
+        try:
+            conn.execute("ROLLBACK")
+        except Exception:
+            pass
+    finally:
+        conn.close()
+
+_migrate_sqlite_messages_sender_fk()
+
+_IMAGE_EXTS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+_IMAGE_MIMES = {'image/jpeg', 'image/png', 'image/gif', 'image/webp'}
+_VIDEO_EXTS = {'mp4'}
+_VIDEO_MIMES = {'video/mp4'}
+_PDF_EXTS = {'pdf'}
+_PDF_MIMES = {'application/pdf'}
+
+def _allowed_upload(file_obj, allowed_exts, allowed_mimes):
+    if not file_obj or not file_obj.filename:
+        return False
+    fn = file_obj.filename
+    if '.' not in fn:
+        return False
+    ext = fn.rsplit('.', 1)[1].lower()
+    if ext not in allowed_exts:
+        return False
+    try:
+        if magic is None:
+            return True
         header = file_obj.read(2048)
         file_obj.seek(0)
         mime = magic.from_buffer(header, mime=True)
-        
-        allowed_mimes = {
-            'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-            'video/mp4', 'application/pdf'
-        }
         return mime in allowed_mimes
     except Exception as e:
         logging.error(f"MIME check error: {e}")
         return False
+
+def allowed_media(file_obj):
+    return _allowed_upload(file_obj, _IMAGE_EXTS | _VIDEO_EXTS, _IMAGE_MIMES | _VIDEO_MIMES)
+
+def allowed_image(file_obj):
+    return _allowed_upload(file_obj, _IMAGE_EXTS, _IMAGE_MIMES)
+
+def allowed_pdf(file_obj):
+    return _allowed_upload(file_obj, _PDF_EXTS, _PDF_MIMES)
 
 def gen_ref_code(n=8):
     return ''.join(random.choices(string.ascii_uppercase+string.digits, k=n))
@@ -396,6 +479,24 @@ app.jinja_env.globals.update(get_notif_count=get_notif_count, is_online=is_onlin
                              app_name=APP_NAME, admin_email=ADMIN_EMAIL, now=datetime.now, csrf_token=csrf_token)
 
 # ─── DECORATORS ─────────────────────────────────────────────────────────────
+def _safe_next_url(next_url: str | None) -> str:
+    if not next_url:
+        return '/'
+    try:
+        p = urlparse(str(next_url))
+    except Exception:
+        return '/'
+    if p.scheme or p.netloc:
+        return '/'
+    path = p.path or '/'
+    if not path.startswith('/'):
+        return '/'
+    if path.startswith('//') or '\\' in path:
+        return '/'
+    if p.query:
+        return f"{path}?{p.query}"
+    return path
+
 def login_required(f):
     @wraps(f)
     def w(*a,**k):
@@ -539,7 +640,7 @@ def login():
                     # 2FA Login Flow
                     send_otp(user['id'], user['email'])
                     session['pending_user_id'] = user['id']
-                    session['otp_next'] = request.args.get('next', '/')
+                    session['otp_next'] = _safe_next_url(request.args.get('next', '/'))
                     
                     audit('LOGIN_OTP_SENT', f'user={user["username"]}', user['id'])
                     flash('Kode OTP telah dikirim ke email kamu (cek konsol).', 'info')
@@ -616,6 +717,7 @@ def verify_otp():
             
             if datetime.now() < expiry_dt:
                 uid = user['id']
+                _csrf_keep = session.get('_csrf_token')
                 session.clear(); session.permanent = True
                 session.update({
                     'user_id': user['id'],
@@ -623,10 +725,12 @@ def verify_otp():
                     'username': user['username'],
                     'email': user['email']
                 })
+                if _csrf_keep:
+                    session['_csrf_token'] = _csrf_keep
                 
                 # Cleanup OTP session
                 session.pop('pending_user_id', None)
-                next_url = session.pop('otp_next', '/')
+                next_url = _safe_next_url(session.pop('otp_next', '/'))
                 
                 # Enhanced Logging
                 ua = request.headers.get('User-Agent','')
@@ -640,7 +744,7 @@ def verify_otp():
                 logging.warning(f"OTP expired for user_id {user['id']} from IP {request.remote_addr}")
                 flash('OTP sudah kadaluwarsa.','danger')
         else:
-            logging.warning(f"Failed OTP verification attempt for user_id {user['id']} from IP {request.remote_addr}")
+            logging.warning(f"Failed OTP verification attempt for user_id {session.get('pending_user_id')} from IP {request.remote_addr}")
             flash('OTP salah.','danger')
         conn.close()
         
@@ -836,7 +940,7 @@ def tambah_social():
 
         media = request.files.get('media_file')
         filename, pt = '', 'text'
-        if media and media.filename and allowed_file(media):
+        if media and media.filename and allowed_media(media):
             ext = media.filename.rsplit('.',1)[1].lower()
             clean_fn = secure_filename(media.filename)
             filename = f"social_{session['user_id']}_{random.randint(10000,99999)}_{clean_fn}"
@@ -853,7 +957,7 @@ def tambah_social():
         post_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
         # Multiple Images
         for f in request.files.getlist('extra_images'):
-            if f and f.filename and allowed_file(f):
+            if f and f.filename and allowed_image(f):
                 ext2 = f.filename.rsplit('.',1)[1].lower()
                 fn2  = f"extra_{post_id}_{random.randint(1000,9999)}.{ext2}"
                 fpath2 = os.path.join(UPLOAD_FOLDER, fn2)
@@ -885,6 +989,10 @@ def tambah_produk():
             flash('Foto produk wajib diunggah.','danger')
             return render_template('tambah_produk.html')
 
+        if not allowed_image(media):
+            flash('Format foto produk tidak didukung.','danger')
+            return render_template('tambah_produk.html')
+
         ext = media.filename.rsplit('.',1)[1].lower()
         clean_fn = secure_filename(media.filename)
         filename = f"prod_{session['user_id']}_{random.randint(10000,99999)}_{clean_fn}"
@@ -909,7 +1017,7 @@ def tambah_produk():
         dig_file = None
         if kind == 'digital':
             df = request.files.get('digital_file')
-            if df and df.filename and allowed_file(df):
+            if df and df.filename and allowed_pdf(df):
                 dext = df.filename.rsplit('.',1)[1].lower()
                 dig_file = f"digital_{session['user_id']}_{random.randint(10000,99999)}.{dext}"
                 df.save(os.path.join(UPLOAD_FOLDER,'digital',dig_file))
@@ -1354,7 +1462,7 @@ def kirim_pesan(target):
 @login_required
 def tambah_story():
     f = request.files.get('story_file')
-    if f and f.filename and allowed_file(f):
+    if f and f.filename and allowed_media(f):
         ext = f.filename.rsplit('.',1)[1].lower()
         fn = f"story_{session['user_id']}_{random.randint(1000,9999)}.{ext}"
         fpath = os.path.join(UPLOAD_FOLDER, fn)
@@ -1578,7 +1686,7 @@ def dm_send(target):
     room_id = room['id']
     filename = None
     m_type = 'text'
-    if media and media.filename and allowed_file(media):
+    if media and media.filename and allowed_image(media):
         ext = media.filename.rsplit('.',1)[1].lower()
         filename = f"chat_{room_id}_{session['user_id']}_{random.randint(1000,9999)}.{ext}"
         media.save(os.path.join(UPLOAD_FOLDER, filename))
@@ -1603,7 +1711,7 @@ def dm_send(target):
     
     # Notify other user
     other_id = room['user2_id'] if session['user_id']==room['user1_id'] else room['user1_id']
-    notif(other_id, f'💬 Pesan dari {session["username"]}', teks, f'/dm/{session["user_uuid"]}', 'info')
+    notif(other_id, f'💬 Pesan dari {session["username"]}', teks, f'/dm/{room["uuid"]}', 'info')
     
     conn.close()
     return jsonify({"status":"ok"})
@@ -1764,7 +1872,7 @@ def dispute(target):
         # Upload bukti awal
         disp_id = conn.execute("SELECT id FROM disputes WHERE room_id=?",(room_id,)).fetchone()['id']
         for f in request.files.getlist('evidence'):
-            if f and f.filename and allowed_file(f):
+            if f and f.filename and (allowed_media(f) or allowed_pdf(f)):
                 ext = f.filename.rsplit('.',1)[1].lower()
                 fn  = f"ev_{disp_id}_{random.randint(1000,9999)}.{ext}"
                 f.save(os.path.join(UPLOAD_FOLDER,'evidence',fn))
@@ -1811,7 +1919,7 @@ def upload_bukti(disp_id):
     if d['status'] != 'open': conn.close(); flash('Dispute sudah ditutup.','warning'); return redirect(f'/dispute/detail/{disp_id}')
 
     for f in request.files.getlist('evidence'):
-        if f and f.filename and allowed_file(f):
+        if f and f.filename and (allowed_media(f) or allowed_pdf(f)):
             ext = f.filename.rsplit('.',1)[1].lower()
             fn  = f"ev_{disp_id}_{random.randint(1000,9999)}.{ext}"
             f.save(os.path.join(UPLOAD_FOLDER,'evidence',fn))
@@ -2188,7 +2296,7 @@ def akun():
         if ft == 'finance':
             fk = request.files.get('file_ktp'); fs = request.files.get('file_selfie')
             if not fk or not fs: flash('Upload KTP dan Selfie.','danger')
-            elif not (allowed_file(fk) and allowed_file(fs)): flash('Format file tidak didukung.','danger')
+            elif not (allowed_image(fk) and allowed_image(fs)): flash('Format file tidak didukung.','danger')
             else:
                 nk = f"kyc_{session['user_id']}_{secure_filename(fk.filename)}"
                 ns = f"kyc_{session['user_id']}_{secure_filename(fs.filename)}"
@@ -2225,7 +2333,7 @@ def akun():
             # Avatar Upload
             avatar = request.files.get('avatar')
             avatar_fn = None
-            if avatar and avatar.filename and allowed_file(avatar):
+            if avatar and avatar.filename and allowed_image(avatar):
                 avatar_fn = f"avatar_{session['user_id']}_{random.randint(1000,9999)}.{avatar.filename.rsplit('.',1)[1].lower()}"
                 fpath = os.path.join(UPLOAD_FOLDER, avatar_fn)
                 avatar.save(fpath)
@@ -2235,7 +2343,7 @@ def akun():
             # Cover Upload
             cover = request.files.get('cover')
             cover_fn = None
-            if cover and cover.filename and allowed_file(cover):
+            if cover and cover.filename and allowed_image(cover):
                 cover_fn = f"cover_{session['user_id']}_{random.randint(1000,9999)}.{cover.filename.rsplit('.',1)[1].lower()}"
                 fpath = os.path.join(UPLOAD_FOLDER, cover_fn)
                 cover.save(fpath)

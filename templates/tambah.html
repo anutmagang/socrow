@@ -169,6 +169,7 @@
 
     <div class="create-card">
         <form method="POST" enctype="multipart/form-data" class="create-form" id="createForm">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
             <!-- TYPE TOGGLE -->
             <div class="form-group">

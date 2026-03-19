@@ -41,7 +41,7 @@ accounts = [
 
 for u in accounts:
     try:
-        exec_sql("""INSERT INTO users(uuid,username,email,phone,password,kyc_status,referral_code,
+        exec_sql("""INSERT OR IGNORE INTO users(uuid,username,email,phone,password,kyc_status,referral_code,
                         kyc_name,bank_name,bank_account,store_name)
                         VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
                      (str(uuid.uuid4()), u[0], u[1], u[2], generate_password_hash(u[3]), u[4], u[5],
@@ -49,12 +49,19 @@ for u in accounts:
         uid_row = exec_sql("SELECT id FROM users WHERE email=?",(u[1],)).fetchone()
         uid = uid_row[0] if not isinstance(uid_row, dict) else uid_row.get('id')
         exec_sql("INSERT OR IGNORE INTO affiliates(user_id,code) VALUES(?,?)",(uid, u[5]))
+        conn.commit()
         print(f"{u[0]:10} | {u[1]:25} | password: {u[3]}")
     except sqlite3.IntegrityError as e:
+        try: conn.rollback()
+        except Exception: pass
         print(f"{u[0]} gagal dibuat: {e}")
     except sqlite3.Error as e:
+        try: conn.rollback()
+        except Exception: pass
         print(f"Database error saat membuat user {u[0]}: {e}")
     except Exception as e:
+        try: conn.rollback()
+        except Exception: pass
         print(f"Error tak terduga saat membuat user {u[0]}: {e}")
 
 # Demo post produk fisik
@@ -62,23 +69,28 @@ try:
     seller = exec_sql("SELECT id FROM users WHERE username='penjual'").fetchone()
     if seller:
         sid = seller['id'] if isinstance(seller, dict) else seller[0]
-        exec_sql("""INSERT INTO posts(uuid,user_id,post_type,product_category,product_kind,
-                        caption,is_for_sale,price,stock,weight_gram)
-                        VALUES(?,?,?,?,?,?,?,?,?,?)""",
-                     (str(uuid.uuid4()), sid,'image','elektronik','fisik',
-                      'HP Samsung Galaxy A55 5G - Mulus, Garansi Resmi, Lengkap Dus',
-                      1, 4500000, 3, 200))
-        exec_sql("""INSERT INTO posts(uuid,user_id,post_type,product_category,product_kind,
-                        caption,is_for_sale,price,stock)
-                        VALUES(?,?,?,?,?,?,?,?,?)""",
-                     (str(uuid.uuid4()), sid,'text','digital','digital',
-                      'Template Website Toko Online - HTML/CSS/JS - Responsif - Siap Pakai',
-                      1, 150000, 999))
-        print("Demo posts dibuat")
+        ex = exec_sql("SELECT COUNT(*) FROM posts WHERE user_id=? AND is_for_sale=1",(sid,)).fetchone()
+        exn = ex[0] if not isinstance(ex, dict) else ex.get('count') or ex.get('COUNT(*)')
+        if not exn:
+            exec_sql("""INSERT INTO posts(uuid,user_id,post_type,product_category,product_kind,
+                            caption,is_for_sale,price,stock,weight_gram)
+                            VALUES(?,?,?,?,?,?,?,?,?,?)""",
+                         (str(uuid.uuid4()), sid,'image','elektronik','fisik',
+                          'HP Samsung Galaxy A55 5G - Mulus, Garansi Resmi, Lengkap Dus',
+                          1, 4500000, 3, 200))
+            exec_sql("""INSERT INTO posts(uuid,user_id,post_type,product_category,product_kind,
+                            caption,is_for_sale,price,stock)
+                            VALUES(?,?,?,?,?,?,?,?,?)""",
+                         (str(uuid.uuid4()), sid,'text','digital','digital',
+                          'Template Website Toko Online - HTML/CSS/JS - Responsif - Siap Pakai',
+                          1, 150000, 999))
+            conn.commit()
+            print("Demo posts dibuat")
 except Exception as e:
+    try: conn.rollback()
+    except Exception: pass
     print(f"Posts: {e}")
 
-conn.commit()
 conn.close()
 
 print("\n" + "="*50)

@@ -250,8 +250,7 @@ def init_db(force=False):
         message_text TEXT,
         message_type TEXT DEFAULT 'text',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(room_id) REFERENCES rekber_rooms(id),
-        FOREIGN KEY(sender_id) REFERENCES users(id)
+        FOREIGN KEY(room_id) REFERENCES rekber_rooms(id)
     )''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS comments (
